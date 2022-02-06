@@ -2,9 +2,7 @@
 
 This project describes how to build a quiet thermostat controlled fan for cooling your media console, cupboard or other enclosed area with Gaming Consoles (PS5) and Computers.
 
-I'll describe how to setup the software and hardware. The software is ESPHome and Home Assistant. The hardware is an ESP32 with a regular 12v 120mm Computer Fan (PWM) and a Temperature Sensor (DHT11).
-
-This is a  smart thermostat which intelligently increases and decreases the 12v fan speed in order to maintain a perfect temperature in your cabinet. Nobody likes dumb thermostats that constantly switch on/off powerful and noisy fans to maintain a temperature.
+The software is ESPHome and Home Assistant. The hardware is an ESP32 with a regular 12v 120mm Computer Fan (PWM) and a Temperature Sensor (DHT11).
 
 ## Cost
 The electronic parts are $29 USD including the ESP32. Probably up to $40 once you add some mounting parts and a project box.
@@ -12,19 +10,21 @@ The electronic parts are $29 USD including the ESP32. Probably up to $40 once yo
 ## Motivation
 My sons's Playstation 5 sits in our TV Console which runs hotter than Sol. Also in that Media Console is a Macmini, a Raspberry Pi and a few other devices. My wife likes to keep the door neat and closed, so it needs some cooling!
 
+I previously had a thermostat which simply toggled the fan on or off if it got too hot. That didn't work for me. This is a smart thermostat which intelligently controls the 12v-fan speed in order to maintain a perfect temperature in your cabinet. It is important to maintain, say, 22% fan speed to keep a cupboard cool than to cycle the fan between 0% and 100% power constantly making wife-unfriendly noise. There is nothing worse than watching a movie and hearing the fan power on.
+
 !["closed cabinet"](images/fortnite.jpg)
 
 ## Features
 The main features are:
 
-- the fan dynamically adjusts it's speed based on the temperature sensor using a Process Control mechanism called PID
-- adjustable target temperature. I currently target 30degC but maybe in winter I'll reduce it to 27.
+- the **fan dynamically adjusts** it's speed based on the temperature sensor using a Process Control mechanism called PID
+- **adjustable target temperature**. I currently target 30degC but maybe in winter I'll reduce it to 27.
 - uses ESP32's Wifi to connect to Home Assistant for control and reporting
-- no screen is needed on the device itself, all management is done via Home Assistant
+- **no screen** is needed on the device itself, all management is done via Home Assistant
 - my system uses two fans for extra cooling. Depending on how much air you need to draw through your enclosed space you could use 1 or 2 fans
 - it is easily extendable to control up to 10 separate enclosed spaces with separate temperature sensors as well. You're only limited by the Amps of your 12v Power Brick and the pins on your ESP32.
-- no coding is needed. Just some configuration in YAML files. In fact this repo only contains 1 file ``config-fan.yaml``.
-- No resistors, capacitors or difficult soldering needed. The fan and the temperature sensor plug straight onto the pins of the ESP32. Although I did mount mine on a perfboard for cleanliness and put it in a case.
+- **no coding is needed**. Just some configuration in YAML files. In fact this repo only contains 1 file ``config-fan.yaml``.
+- **No resistors, capacitors or difficult soldering needed**. The fan and the temperature sensor plug straight onto the pins of the ESP32. Although I did mount mine on a perfboard for cleanliness and put it in a case.
 
 !["graphs"](images/demo.jpg)
 
