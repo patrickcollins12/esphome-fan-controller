@@ -169,8 +169,8 @@ fan:
     output: console_fan_speed
     name: "Console Fan Speed"
 
-# Setup an automatic PID-controlled Thermostat
-# https://esphome.io/components/climate/pid.html
+# Expose a PID-controlled Thermostat
+# Manual: https://esphome.io/components/climate/pid.html
 climate:
   - platform: pid
     name: "Console Fan Thermostat"
@@ -181,7 +181,7 @@ climate:
     default_target_temperature: 30°C
     cool_output: console_fan_speed
 
-    # dummy heater. enable this when using autotune
+    # dummy heater. enable this if using autotune
     # heat_output: console_heat_speed
 
     # The extents of the HA Thermostat
@@ -189,25 +189,11 @@ climate:
       min_temperature: 20 °C
       max_temperature: 50 °C
 
+    # See the README for setting up these parameters.
+    # These are over ridden by the helpers above.
     control_parameters:
-
-      # KP is the main Gain. How aggressively will the fan respond to a small change in temperarature?
-      #
-      # lower gain (0.1) is less likely to oscillate, more likely to under react to big changes and will create a bigger offset.
-      # higher gain (1.0) is more likely to oscillate, will react quickly to small temperature changes.
-      #
-      # 0.1 much less aggressive and might slowly let 1.5c rack up before the fan
-      #  hits 100%. Takes up to 10 minutes to close a 0.5degC gap
       kp: 0.1 
-
-      # 1/s where seconds is how long it should attempt to correct an offset. 
-      # see table here https://blog.opticontrols.com/archives/344
-      # ki: 0.0033 = 1/300 (5 minutes to correct an offset)
       ki: 0.0009
-
-      # not sure about this one. it seemed to do well on 1. 
-      # it overshoots too much if i use it
-      # only 30% of pid controllers use the D term
       kd: 0
 
 switch:
