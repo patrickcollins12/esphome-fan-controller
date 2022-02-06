@@ -1,0 +1,230 @@
+substitutions:
+  friendly_name: Console Fan
+
+esphome:
+  name: console-fan
+
+#########################
+# ESP32 AND NETWORK SETUP
+
+esp32:
+  board: nodemcu-32s
+  framework:
+    type: arduino
+
+# default logger, HA integration, OTA updater and backup http web portal
+logger:
+api:
+ota:
+captive_portal:
+
+wifi:
+
+  # Read the wifi/pass from secrets.yaml:
+  # wifi_ssid: "My Wifi XX"
+  # wifi_password: "XXXXXXX"
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "console-fan-ap"
+    password: "O2YQivORnPXe"
+
+text_sensor:
+
+  # Send IP Address
+  - platform: wifi_info
+    ip_address:
+      name: $friendly_name IP Address
+
+  # Send Uptime in raw seconds
+  - platform: template
+    name: $friendly_name Uptime
+    id: uptime_human
+    icon: mdi:clock-start
+
+  ## RECEIVE kp,ki and kd parameters from input_text.kx helpers in 
+  # Home Assistant. See the PID controller below
+  # These helper values will get saved to flash thus permanently over-riding 
+  # the initial values set in the PID below.
+  - platform: homeassistant
+    id: ha_kp
+    entity_id: input_text.kp # this is the name of the HA Helper
+    on_value: 
+      then:
+        # C++ code to convert the HA string to a float.
+        - lambda: |-
+            ESP_LOGD("main", "kp was %f", id(console_thermostat).get_kp());
+            id(console_thermostat).set_kp( std::atof(id(ha_kp).state.c_str() ) );
+            ESP_LOGD("main", "kp now %f", id(console_thermostat).get_kp());
+
+  - platform: homeassistant
+    id: ha_ki
+    entity_id: input_text.ki
+    on_value: 
+      then:
+        - lambda: |-
+            ESP_LOGD("main", "ki was %f", id(console_thermostat).get_ki());
+            id(console_thermostat).set_ki( std::atof(id(ha_ki).state.c_str()  ) );
+            ESP_LOGD("main", "ki now %f", id(console_thermostat).get_ki());
+
+  - platform: homeassistant     
+    id: ha_kd
+    entity_id: input_text.kd
+    on_value: 
+      then:
+        - lambda: |-
+            ESP_LOGD("main", "kd was %f", id(console_thermostat).get_kd());
+            id(console_thermostat).set_kd( std::atof(id(ha_kd).state.c_str() ) );
+            ESP_LOGD("main", "kd now %f", id(console_thermostat).get_kd());
+          
+sensor:
+
+  # Send WiFi signal strength & uptime to HA
+  - platform: wifi_signal
+    name: $friendly_name WiFi Strength
+    update_interval: 60s
+
+  # This is a bit of overkill. It sends a human readable 
+  # uptime string
+  # 1h 41m 32s instead of 6092 seconds
+  - platform: uptime
+    name: $friendly_name Uptime
+    id: uptime_sensor
+    update_interval: 60s
+    on_raw_value:
+      then:
+        - text_sensor.template.publish:
+            id: uptime_human
+            # Custom C++ code to generate the result
+            state: !lambda |-
+              int seconds = round(id(uptime_sensor).raw_state);
+              int days = seconds / (24 * 3600);
+              seconds = seconds % (24 * 3600);
+              int hours = seconds / 3600;
+              seconds = seconds % 3600;
+              int minutes = seconds /  60;
+              seconds = seconds % 60;
+              return (
+                (days ? to_string(days) + "d " : "") +
+                (hours ? to_string(hours) + "h " : "") +
+                (minutes ? to_string(minutes) + "m " : "") +
+                (to_string(seconds) + "s")
+              ).c_str();
+
+########################################################
+# START THE FAN CONTROLLER SETUP
+
+  # GET TEMP/HUMIDITY FROM DHT11
+  - platform: dht
+    pin: GPIO3
+    temperature:
+      name: "Temperature"
+      id: console_fan_temperature
+
+      # If you don't smooth the output readings 
+      # the PID controller over reacts to small changes.
+      filters:
+        - sliding_window_moving_average:
+            window_size: 15
+            send_every: 15
+            send_first_at: 1
+  
+    humidity:
+      name: "Humidity"
+      id: console_fan_humidity
+
+    # the DHT11 can only be read every 1s. Use 1.3s to be safe.
+    # Note that 15 x 1.3s means that the true temperature may 
+    # take 19.5s to emerge
+    update_interval: 1.3s
+
+  # Take the "COOL" value of the pid and send 
+  # it to the frontend to graph the output voltage
+  - platform: pid
+    name: "Fan Speed (PWM Voltage)"
+    climate_id: console_thermostat
+    type: COOL
+
+
+output:
+
+  # Wire this pin (15) into the PWM pin of your 12v fan
+  # ledc is the name of the pwm output system on an esp32
+  - platform: ledc
+    id: console_fan_speed
+    pin: 15
+
+    # 25KHz is standard PC fan frequency, minimises buzzing
+    frequency: "25000 Hz" 
+
+    # my fans are powerful and loud, cap their max speed
+    # min_power: 15%
+    max_power: 80%
+
+# Good for debugging, you can manually set the fan speed.
+fan:
+  - platform: speed
+    output: console_fan_speed
+    name: "Console Fan Speed"
+
+# Setup an automatic PID-controlled Thermostat
+# https://esphome.io/components/climate/pid.html
+climate:
+  - platform: pid
+    name: "Console Fan Thermostat"
+    id: console_thermostat
+    sensor: console_fan_temperature
+
+    # It is summer right now, so 30c is a decent target.
+    default_target_temperature: 30°C
+    cool_output: console_fan_speed
+
+    # dummy heater. enable this when using autotune
+    # heat_output: console_heat_speed
+
+    # The extents of the HA Thermostat
+    visual:
+      min_temperature: 20 °C
+      max_temperature: 50 °C
+
+    control_parameters:
+
+      # KP is the main Gain. How aggressively will the fan respond to a small change in temperarature?
+      #
+      # lower gain (0.1) is less likely to oscillate, more likely to under react to big changes and will create a bigger offset.
+      # higher gain (1.0) is more likely to oscillate, will react quickly to small temperature changes.
+      #
+      # 0.1 much less aggressive and might slowly let 1.5c rack up before the fan
+      #  hits 100%. Takes up to 10 minutes to close a 0.5degC gap
+      kp: 0.1 
+
+      # 1/s where seconds is how long it should attempt to correct an offset. 
+      # see table here https://blog.opticontrols.com/archives/344
+      # ki: 0.0033 = 1/300 (5 minutes to correct an offset)
+      ki: 0.0009
+
+      # not sure about this one. it seemed to do well on 1. 
+      # it overshoots too much if i use it
+      # only 30% of pid controllers use the D term
+      kd: 0
+
+switch:
+
+  # Expose a switch to begin the tuning process.
+  # Personally I couldn't get any decent values out 
+  # of the tuning process, the values were far too aggressive.
+  # So I used my own variables as shown above 
+  - platform: template
+    name: "Console Fan Autotune"
+    turn_on_action:
+      - climate.pid.autotune: 
+          id: console_thermostat  
+          noiseband: 0.25
+          positive_output: 50%
+          negative_output: -50%
+
+  # Expose an ESP32 restart button to HA
+  - platform: restart
+    name: "Console Fan ESP32 Restart"
