@@ -78,7 +78,7 @@ Review the instructions for [the ESPHome Climate Thermostat](https://esphome.io/
 
 Change the device name from ``console-fan`` to whatever seems appropriate. You might want to change the yaml filename as well.
 
-Note that the DHT11 sensor is setup to average the last 15 readings. Each reading takes place every 1.5 seconds. Without this filter the PID controller reacts to every minor sensor movement. If you got a faster sensor like the BME260 you might need to tweak this filter.
+Note that the DHT11 sensor is setup to average the last 15 readings. Each reading takes place every 1.5 seconds. Without this filter the PID controller reacts to every minor sensor movement. If you have a faster sensor like the BME260 you might need to tweak this filter.
 
 ```yaml
 filters:
