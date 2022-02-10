@@ -126,9 +126,10 @@ sensor:
       # If you don't smooth the output readings 
       # the PID controller over reacts to small changes.
       filters:
+        # - max:
         - sliding_window_moving_average:
             window_size: 15
-            send_every: 15
+            send_every: 1
             send_first_at: 1
   
     humidity:
