@@ -128,7 +128,7 @@ sensor:
       filters:
         # - max:
         - sliding_window_moving_average:
-            window_size: 15
+            window_size: 6
             send_every: 1
             send_first_at: 1
   
@@ -161,7 +161,7 @@ output:
     frequency: "25000 Hz" 
 
     # my fans are powerful and loud, cap their max speed
-    # min_power: 15%
+    min_power: 13%
     max_power: 80%
 
 # Good for debugging, you can manually set the fan speed.
@@ -189,7 +189,7 @@ climate:
     visual:
       min_temperature: 20 °C
       max_temperature: 50 °C
-
+  
     # See the README for setting up these parameters.
     # These are over ridden by the helpers above.
     control_parameters:
@@ -211,7 +211,7 @@ switch:
           noiseband: 0.25
           positive_output: 50%
           negative_output: -50%
-
+      
   # Expose an ESP32 restart button to HA
   - platform: restart
     name: "Console Fan ESP32 Restart"
