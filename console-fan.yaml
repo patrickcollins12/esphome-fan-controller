@@ -4,6 +4,20 @@ substitutions:
 esphome:
   name: console-fan
 
+  # on_boot:
+  #   priority: -100
+  #   then: 
+  #     lambda: |-
+  #       // delay(10000);
+  #       ESP_LOGI("main", "!!!!!! kp from boot %f", id("console_fan_kp") );
+  #       id(console_thermostat).set_kp( id("$friendly_name kp") );
+
+globals:
+  - id: dhttemp
+    type: float
+    restore_value: yes
+    initial_value: '0'
+ 
 #########################
 # ESP32 AND NETWORK SETUP
 
@@ -12,8 +26,14 @@ esp32:
   framework:
     type: arduino
 
-# default logger, HA integration, OTA updater and backup http web portal
+# pid climate log update is noisy, dial it back to warn
 logger:
+  level: DEBUG
+  logs: 
+    climate: ERROR
+    dht: WARN
+
+# default HA integration, OTA updater and backup http web portal
 api:
 ota:
 captive_portal:
@@ -31,6 +51,49 @@ wifi:
     ssid: "console-fan-ap"
     password: ""
 
+number:
+
+  ## RECEIVE kp,ki and kd parameters from input_text.kx helpers in 
+  # Home Assistant. See the PID controller below
+  # These helper values will get saved to flash thus permanently over-riding 
+  # the initial values set in the PID below.
+
+  # KP
+  - platform: template
+    name: $friendly_name kp
+    icon: mdi:chart-bell-curve
+    restore_value: true
+    min_value: 0
+    max_value: 50
+    step: 0.001
+    set_action: 
+      lambda: |- 
+        ESP_LOGI("main", "!!!!!! kp from boot %d", id("console_fan_kp") );
+        id(console_thermostat).set_kp( id("$friendly_name kp") );
+        id(console_thermostat).set_kp( x );
+
+  # KI
+  - platform: template
+    name: $friendly_name ki
+    icon: mdi:chart-bell-curve
+    restore_value: true
+    min_value: 0
+    max_value: 50
+    step: 0.0001
+    set_action: 
+      lambda: id(console_thermostat).set_ki( x );
+
+  # KD
+  - platform: template
+    name: $friendly_name kd
+    icon: mdi:chart-bell-curve
+    restore_value: true
+    min_value: 0
+    max_value: 50
+    step: 0.001
+    set_action: 
+      lambda: id(console_thermostat).set_kd( x );
+
 text_sensor:
 
   # Send IP Address
@@ -44,41 +107,6 @@ text_sensor:
     id: uptime_human
     icon: mdi:clock-start
 
-  ## RECEIVE kp,ki and kd parameters from input_text.kx helpers in 
-  # Home Assistant. See the PID controller below
-  # These helper values will get saved to flash thus permanently over-riding 
-  # the initial values set in the PID below.
-  - platform: homeassistant
-    id: ha_kp
-    entity_id: input_text.kp # this is the name of the HA Helper
-    on_value: 
-      then:
-        # C++ code to convert the HA string to a float.
-        - lambda: |-
-            ESP_LOGD("main", "kp was %f", id(console_thermostat).get_kp());
-            id(console_thermostat).set_kp( std::atof(id(ha_kp).state.c_str() ) );
-            ESP_LOGD("main", "kp now %f", id(console_thermostat).get_kp());
-
-  - platform: homeassistant
-    id: ha_ki
-    entity_id: input_text.ki
-    on_value: 
-      then:
-        - lambda: |-
-            ESP_LOGD("main", "ki was %f", id(console_thermostat).get_ki());
-            id(console_thermostat).set_ki( std::atof(id(ha_ki).state.c_str()  ) );
-            ESP_LOGD("main", "ki now %f", id(console_thermostat).get_ki());
-
-  - platform: homeassistant     
-    id: ha_kd
-    entity_id: input_text.kd
-    on_value: 
-      then:
-        - lambda: |-
-            ESP_LOGD("main", "kd was %f", id(console_thermostat).get_kd());
-            id(console_thermostat).set_kd( std::atof(id(ha_kd).state.c_str() ) );
-            ESP_LOGD("main", "kd now %f", id(console_thermostat).get_kd());
-          
 sensor:
 
   # Send WiFi signal strength & uptime to HA
@@ -122,16 +150,19 @@ sensor:
     temperature:
       name: "Temperature"
       id: console_fan_temperature
+      accuracy_decimals: 3
 
       # If you don't smooth the output readings 
       # the PID controller over reacts to small changes.
       filters:
-        # - max:
-        - sliding_window_moving_average:
-            window_size: 6
-            send_every: 1
-            send_first_at: 1
-  
+        # - sliding_window_moving_average:
+        #     window_size: 6
+        #     send_every: 1
+        #     send_first_at: 1
+         - exponential_moving_average:  
+             alpha: 0.1
+             send_every: 1
+
     humidity:
       name: "Humidity"
       id: console_fan_humidity
@@ -148,9 +179,7 @@ sensor:
     climate_id: console_thermostat
     type: COOL
 
-
 output:
-
   # Wire this pin (15) into the PWM pin of your 12v fan
   # ledc is the name of the pwm output system on an esp32
   - platform: ledc
@@ -160,7 +189,8 @@ output:
     # 25KHz is standard PC fan frequency, minimises buzzing
     frequency: "25000 Hz" 
 
-    # my fans are powerful and loud, cap their max speed
+    # my fans stop working below 13% powerful.
+    # also they're  powerful and loud, cap their max speed to 80%
     min_power: 13%
     max_power: 80%
 
@@ -191,27 +221,13 @@ climate:
       max_temperature: 50 °C
   
     # See the README for setting up these parameters.
-    # These are over ridden by the helpers above.
+    # These are over ridden by the number templates above.
     control_parameters:
-      kp: 0.1 
-      ki: 0.0009
-      kd: 0
+      kp: 0.081
+      ki: 0.0016
+      kd: 3
 
 switch:
-
-  # Expose a switch to begin the tuning process.
-  # Personally I couldn't get any decent values out 
-  # of the tuning process, the values were far too aggressive.
-  # So I used my own variables as shown above 
-  - platform: template
-    name: "Console Fan Autotune"
-    turn_on_action:
-      - climate.pid.autotune: 
-          id: console_thermostat  
-          noiseband: 0.25
-          positive_output: 50%
-          negative_output: -50%
-      
   # Expose an ESP32 restart button to HA
   - platform: restart
     name: "Console Fan ESP32 Restart"

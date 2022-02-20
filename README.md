@@ -149,7 +149,7 @@ If the above steps worked correctly, the device will be auto-discovered by Home 
 
 Multiple sensors and switches are exposed by the ESPHome software.
 
-To finish the installation you need to add 3 text helpers for kp,ki and kd. Those are explained in the last section. You also need to setup the dashboard. I'll explain those two steps below.
+You also need to setup the dashboard. I'll explain those two steps below.
 
 ## Setting up the Home Assistant Dashboard
 
@@ -175,9 +175,9 @@ entities:
     name: Room Temperature
   - entity: sensor.openweathermap_temperature
     name: Outside temperature
-  - entity: input_text.kp
-  - entity: input_text.ki
-  - entity: input_text.kd
+  - entity: number.console_fan_kp
+  - entity: number.console_fan_ki
+  - entity: number.console_fan_kd
   ```
 
 - The ``Fan Speed (PWM Voltage)`` is the % of voltage being sent out via PWM to the fan controller. At 100% it will be sending 12v, at 50% it will be sending 6v.
@@ -186,33 +186,7 @@ entities:
 
 - The Room and Outside temperatures are from other sensors in my house for reference.
 
-- The ``kp, ki and kd`` inputs are ``helpers`` which are text inputs. Your ESP32 will be automatically receiving changes to these values to control the behavior of the PID controller.
-
-### Setting up the PID Controller helpers
-
-In the next section we'll talk about tuning the PID parameters.
-
-Whilst you could tune these from the config.yaml it requires a compile, upload and reboot cycle each time. This is inconvenient and best to tweak in real-time. We want to expose these 3 parameters to a Home Assistant dashboard as follows.
-
-<img src="images/pid.jpg" width=400>
-
-
-Setup some Text Helpers by going to Configuration > Automations & Scenes > Helpers > Add Helper.
-
-Add 3 Text helpers called kp,ki and kd.
-
-<img src="images/helper2.jpg" width=400>
-
-Now we can expose these to a Home Assistant dashboard. Use this Lovelace YAML:
-
-```yaml
-type: entities
-title: Console Fan
-entities:
-  - entity: input_text.kp
-  - entity: input_text.ki
-  - entity: input_text.kd
-```
+- The ``kp, ki and kd`` inputs are exposed from the device. Your ESP32 will be automatically receiving changes to these values to control the behavior of the PID controller. While you could tune these from the config.yaml it requires a compile, upload and reboot cycle each time. This is inconvenient and best to tweak in real-time. We want to expose these 3 parameters to a Home Assistant dashboard.
 
 ### The Graphs
 
@@ -297,15 +271,13 @@ Using higher gain (1.0):
 
 The ki parameter adjusts for temperature offset. Try setting ki to 0. Set your system initially with kp=0.1, ki=0 and kd=0. You'll find that the system operates with a constant delta/offset to the target temperature. The ki parameter adjusts for this.
 
-1/ki is the seconds it should attempt to correct an offset. So 0.03 will adjust in 30seconds. 0.0009 will adjust in 20 minutes. See a good description here https://blog.opticontrols.com/archives/344
+1/ki is the seconds it should attempt to correct an offset. So 0.03 will adjust in 30seconds. 0.0009 will close a small temperature delta in 20 minutes. See a good description here https://blog.opticontrols.com/archives/344
 
-A low value of 0.0009 means that the system will take up to 20 minutes to fully close a small temperature delta.
-
-Higher numbers like 0.003 will respond much quicker, but it also will cause a lot of noise and oscillation in the fan speed.
+Higher numbers like 0.03 will respond much quicker, but it also will cause a lot of noise and oscillation in the fan speed.
 
 ### Setting the kd parameter - predicting a change
 
-The kd (D in PID) is meant to pre-react and backoff early. I couldn't find any parameters here that worked for my system without creating a lot of noise and oscillation. The interwebs says that most (70%) of process controllers don't use the D and just a PI controller.
+The kd (D in PID) is meant to pre-react and backoff early. Small parameters can help overshoot but does create some fan noise and oscillation. The interwebs says that most (70%) of process controllers don't use the D and just a PI controller.
 
 ### Tell me
 I'm keen to hear what PID parameters works for your fan.
