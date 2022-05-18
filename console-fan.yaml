@@ -68,8 +68,8 @@ number:
     step: 0.001
     set_action: 
       lambda: |- 
-        ESP_LOGI("main", "!!!!!! kp from boot %d", id("console_fan_kp") );
-        id(console_thermostat).set_kp( id("$friendly_name kp") );
+        // ESP_LOGI("main", "!!!!!! kp from boot %d", id("console_fan_kp") );
+        // id(console_thermostat).set_kp( id("$friendly_name kp") );
         id(console_thermostat).set_kp( x );
 
   # KI
@@ -88,11 +88,12 @@ number:
     name: $friendly_name kd
     icon: mdi:chart-bell-curve
     restore_value: true
-    min_value: 0
+    min_value: -50
     max_value: 50
     step: 0.001
     set_action: 
       lambda: id(console_thermostat).set_kd( x );
+
 
 text_sensor:
 
@@ -143,6 +144,50 @@ sensor:
 
 ########################################################
 # START THE FAN CONTROLLER SETUP
+
+  - platform: template
+    name: $friendly_name p term
+    id: p_term
+    unit_of_measurement: "%"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: $friendly_name i term
+    id: i_term
+    unit_of_measurement: "%"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: $friendly_name d term
+    id: d_term
+    unit_of_measurement: "%"
+    accuracy_decimals: 2
+
+  - platform: template
+    name: $friendly_name output value
+    unit_of_measurement: "%"
+    id: o_term
+    accuracy_decimals: 2
+
+  - platform: template
+    name: $friendly_name error value
+    id: e_term
+    accuracy_decimals: 2
+
+  - platform: template
+    name: $friendly_name zero 
+    id: zero_value
+    update_interval: 60s
+    lambda: |-
+      return 0;
+
+  - platform: template
+    name: $friendly_name zero percent
+    unit_of_measurement: "%"
+    id: zero_value_percent
+    update_interval: 60s
+    lambda: |-
+      return 0;
 
   # GET TEMP/HUMIDITY FROM DHT11
   - platform: dht
@@ -212,6 +257,23 @@ climate:
     default_target_temperature: 30°C
     cool_output: console_fan_speed
 
+    on_state:
+      - sensor.template.publish:
+          id: p_term
+          state: !lambda 'return -id(console_thermostat).get_proportional_term() * 100.0;'
+      - sensor.template.publish:
+          id: i_term
+          state: !lambda 'return -id(console_thermostat).get_integral_term()* 100.0;'
+      - sensor.template.publish:
+          id: d_term
+          state: !lambda 'return -id(console_thermostat).get_derivative_term()* 100.0;'
+      - sensor.template.publish:
+          id: o_term
+          state: !lambda 'return -id(console_thermostat).get_output_value()* 100.0;'
+      - sensor.template.publish:
+          id: e_term
+          state: !lambda 'return -id(console_thermostat).get_error_value();'
+        
     # dummy heater. enable this if using autotune
     # heat_output: console_heat_speed
 
@@ -223,9 +285,13 @@ climate:
     # See the README for setting up these parameters.
     # These are over ridden by the number templates above.
     control_parameters:
-      kp: 0.081
-      ki: 0.0016
-      kd: 3
+      kp: 0.15
+      ki: 0.004
+      kd: 0.5
+      max_integral: 0.0
+
+
+  
 
 switch:
   # Expose an ESP32 restart button to HA
