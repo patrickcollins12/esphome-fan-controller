@@ -20,6 +20,7 @@ The main features are:
 - the **fan dynamically adjusts** it's speed based on the temperature sensor using a Process Control mechanism called PID
 - **adjustable target temperature**. I currently target 30degC but maybe in winter I'll reduce it to 27.
 - uses ESP32's Wifi to connect to Home Assistant for control and reporting
+- the ESP32 is standalone and so the cooling function will continue to operate without Wifi. Doesn't need HomeAssistant or Wifi to operate. Wifi is only needed for setup, manual control and reporting.
 - **no screen** is needed on the device itself, all management is done via Home Assistant
 - my system uses two fans for extra cooling. Depending on how much air you need to draw through your enclosed space you could use 1 or 2 fans
 - it is easily extendable to control up to 10 separate enclosed spaces with separate temperature sensors as well. You're only limited by the Amps of your 12v Power Brick and the pins on your ESP32.
