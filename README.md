@@ -112,9 +112,13 @@ Set the correct pin for your temp sensor. Note that the DHT11 sensor is setup to
 
 ```
 
+(Some people [take an average of two temperature sensors](https://github.com/patrickcollins12/esphome-fan-controller/issues/5).)
+
 ### Setup your PWM fan
 
-Also note that my fans stop working below 13% power, so I set that is the minimum. I have a max power of 80% applied to the fans to minimise the wife-unfriendly noise. You might want to remove this minimum or maximum. Make sure you connect your fan to a PWM capable GPIO. All ESP32 pins that can act as outputs can be used as PWM pins but GPIOs 34-39 can’t generate PWM.
+Make sure you connect your fan to a PWM capable GPIO. All ESP32 pins that can act as outputs can be used as PWM pins but GPIOs 34-39 can’t generate PWM.
+
+Also note that my fans stop spinning below 13% power, so I set that as the minimum. I have a max power of 80% applied to the fans to make them wife-friendly. You might want to remove this minimum or maximum. 
 
 ```yaml
   - platform: ledc
