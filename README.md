@@ -75,6 +75,11 @@ Some important notes:
 Clone this github repository.
 From the command line cd into the directory
 
+```
+git clone https://github.com/patrickcollins12/esphome-fan-controller.git
+cd esphome-fan-controller
+```
+
 ### Review the YAML and read the ESPHome docs.
 
 Review the YAML file.
@@ -84,6 +89,8 @@ Ensure the pins are set correctly for the PWM Fan (ledc) and the DHT-11.
 Review the instructions for [the ESPHome Climate Thermostat](https://esphome.io/components/climate/index.html), [ESPHome PID Climate Thermostat](https://esphome.io/components/climate/pid.html) and the [DHT-11 sensor](https://esphome.io/components/sensor/dht.html).
 
 Change the device name from ``console-fan`` to whatever seems appropriate. You might want to change the yaml filename as well.
+
+### Setup your temperature sensor
 
 Set the correct pin for your temp sensor. Note that the DHT11 sensor is setup to use an exponential moving average. Without this filter the PID controller reacts to every minor sensor movement. If you have a faster sensor like the BME260 you might need to tweak this filter.
 
@@ -104,6 +111,8 @@ Set the correct pin for your temp sensor. Note that the DHT11 sensor is setup to
              send_every: 1
 
 ```
+
+### Setup your PWM fan
 
 Also note that my fans stop working below 13% power, so I set that is the minimum. I have a max power of 80% applied to the fans to minimise the wife-unfriendly noise. You might want to remove this minimum or maximum. Make sure you connect your fan to a PWM capable GPIO. All ESP32 pins that can act as outputs can be used as PWM pins but GPIOs 34-39 can’t generate PWM.
 
@@ -133,7 +142,7 @@ Edit your wifi credentials in secrets.yaml. The .gitignore will prevent you acci
 I prefer command-line on Mac:
 ``pip3 install esphome``
 
-You could use the ESPHome that runs inside Home Assistant. 
+Most people use the ESPHome that runs inside Home Assistant. You can use that too.
 
 ### Install to ESP32
 
