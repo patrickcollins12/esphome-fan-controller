@@ -41,7 +41,7 @@ This is a screenshot from Home Assistant. I'll show you how to setup this dashbo
 
 - **DHT11** - temperature and humidity sensor. I'm using the one on a board with 3-pins. Cost $1.50 USD<br><img src="images/dht-11.png" width="100">
 
-- **12v PWM 4-pin Computer Fan** - I'm using 2 x [120mm Corsair fans](https://www.corsair.com/us/en/Categories/Products/Fans/Magnetic-Levitation-Fans/ml-config/p/CO-9050039-WW). Any 12v PWM-controllable fan should work. Cost $8-$15 USD. I recommend getting high quality fans if you care about noise and need to move a lot of air<br><img src="images/corsair-fan.png" width="100">
+- **12v PWM 4-pin Computer Fan** - I'm using 2 x [120mm Corsair fans](https://www.corsair.com/us/en/Categories/Products/Fans/Magnetic-Levitation-Fans/ml-config/p/CO-9050039-WW). Any 12v PWM-controllable fan should work. Cost $8-$15 USD. I recommend getting high quality fans if you care about noise and need to move a lot of air<br><img src="images/corsair-fan.png" width="100">. 
 
 - **12v Power Adapter** - 1A or 2A should be fine depending on your fan's current draw. Cost $7 <br><img src="images/12v%20power%20supply.jpeg" width="100"> 
 
@@ -51,6 +51,12 @@ This is a screenshot from Home Assistant. I'll show you how to setup this dashbo
 
 - **ESP32**. You can use any ESP32. I'm using a NodeMCU compatible board. Mine cost $4 from Aliexpress<br><img src="images/nodemcu-esp32.png" width="100"> 
 
+## Choosing a Good Fan
+As you'll see below, our fans are being powered by the PWM pin. Our expectation is that the fans stop spinning at 0% power. Some people have reported that some fans don't stop running at 0% power (or worse that they stop completely at 100% power which is weird). 
+
+It appears that Corsair and Noctua fans behave as expected so you might want to stick with them.
+
+However, if your fan does behave this way, you can use a MOSFET like the FQP30N06L to add an on/off switch to another GPIO pin to completely cut the power when the PWM output is at 0%. If you need a schematic, please [post an issue](https://github.com/patrickcollins12/esphome-fan-controller/issues/new) and we can help out.
 
 ## Wiring Diagram
 <img src="images/12v%20fan%20controller.png">
