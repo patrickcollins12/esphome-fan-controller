@@ -3,20 +3,6 @@ substitutions:
 
 esphome:
   name: console-fan
-
-  # on_boot:
-  #   priority: -100
-  #   then: 
-  #     lambda: |-
-  #       // delay(10000);
-  #       ESP_LOGI("main", "!!!!!! kp from boot %f", id("console_fan_kp") );
-  #       id(console_thermostat).set_kp( id("$friendly_name kp") );
-
-globals:
-  - id: dhttemp
-    type: float
-    restore_value: yes
-    initial_value: '0'
  
 #########################
 # ESP32 AND NETWORK SETUP
@@ -36,8 +22,6 @@ logger:
 # default HA integration, OTA updater and backup http web portal
 api:
 ota:
-captive_portal:
-
 wifi:
 
   # Read the wifi/pass from secrets.yaml:
@@ -46,14 +30,10 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
 
-  # Enable fallback hotspot (captive portal) in case wifi connection fails
-  ap:
-    ssid: "console-fan-ap"
-    password: ""
-
 number:
 
-  ## RECEIVE kp,ki and kd parameters from input_text.kx helpers in 
+  ## OPTIONAL:
+  # RECEIVE kp,ki and kd parameters from input_text.kx helpers in 
   # Home Assistant. See the PID controller below
   # These helper values will get saved to flash thus permanently over-riding 
   # the initial values set in the PID below.
@@ -68,8 +48,6 @@ number:
     step: 0.001
     set_action: 
       lambda: |- 
-        // ESP_LOGI("main", "!!!!!! kp from boot %d", id("console_fan_kp") );
-        // id(console_thermostat).set_kp( id("$friendly_name kp") );
         id(console_thermostat).set_kp( x );
 
   # KI
@@ -94,7 +72,6 @@ number:
     set_action: 
       lambda: id(console_thermostat).set_kd( x );
 
-
 text_sensor:
 
   # Send IP Address
@@ -116,8 +93,7 @@ sensor:
     update_interval: 60s
 
   # This is a bit of overkill. It sends a human readable 
-  # uptime string
-  # 1h 41m 32s instead of 6092 seconds
+  # uptime string 1h 41m 32s instead of 6092 seconds
   - platform: uptime
     name: $friendly_name Uptime
     id: uptime_sensor
@@ -191,19 +167,15 @@ sensor:
 
   # GET TEMP/HUMIDITY FROM DHT11
   - platform: dht
-    pin: GPIO3
+    pin: GPIO33
     temperature:
       name: "Temperature"
       id: console_fan_temperature
       accuracy_decimals: 3
 
-      # If you don't smooth the output readings 
+      # If you don't smooth the temperature readings 
       # the PID controller over reacts to small changes.
       filters:
-        # - sliding_window_moving_average:
-        #     window_size: 6
-        #     send_every: 1
-        #     send_first_at: 1
          - exponential_moving_average:  
              alpha: 0.1
              send_every: 1
@@ -213,8 +185,6 @@ sensor:
       id: console_fan_humidity
 
     # the DHT11 can only be read every 1s. Use 1.3s to be safe.
-    # Note that 15 x 1.3s means that the true temperature may 
-    # take 19.5s to emerge
     update_interval: 1.3s
 
   # Take the "COOL" value of the pid and send 
@@ -257,6 +227,8 @@ climate:
     default_target_temperature: 30°C
     cool_output: console_fan_speed
 
+    # ON state change, publish the values to the x_term numbers defined 
+    # above, so that they can be viewed in HA
     on_state:
       - sensor.template.publish:
           id: p_term
@@ -274,9 +246,6 @@ climate:
           id: e_term
           state: !lambda 'return -id(console_thermostat).get_error_value();'
         
-    # dummy heater. enable this if using autotune
-    # heat_output: console_heat_speed
-
     # The extents of the HA Thermostat
     visual:
       min_temperature: 20 °C
@@ -285,15 +254,49 @@ climate:
     # See the README for setting up these parameters.
     # These are over ridden by the number templates above.
     control_parameters:
-      kp: 0.15
-      ki: 0.004
-      kd: 0.5
+      kp: 0.3
+      ki: 0.0015
+      kd: 0
       max_integral: 0.0
+      output_averaging_samples: 1
+      derivative_averaging_samples: 5
 
-
-  
+    # How to behave when close to the target temperature?
+    deadband_parameters:
+      threshold_high: 0.4°C
+      threshold_low: -1.0°C
+      kp_multiplier: 0.0
+      ki_multiplier: 0.04
+      kd_multiplier: 0.0
+      deadband_output_averaging_samples: 15
 
 switch:
   # Expose an ESP32 restart button to HA
   - platform: restart
-    name: "Console Fan ESP32 Restart"
+    name: ${friendly_name} ESP32 Restart
+    id: console_fan_restart
+
+# Restart every day at 12:30am. 
+# I've had some memory issues lockup 
+# the device after a couple weeks
+time:
+  - platform: homeassistant
+    on_time:
+      # Every morning at 12:30am
+    - seconds: 0
+      minutes: 30
+      hours: 0
+      then:
+       - switch.turn_on: console_fan_restart
+
+
+# I was able to find good KP,KI,KD values manually, per the instructions,
+# but you can try pressing the autotune button from home assistant and copying the 
+# values it produces. 
+# See more at: https://esphome.io/components/climate/pid.html#climate-pid-autotune-action
+button:
+- platform: template
+  name: "PID Climate Autotune"
+  on_press:
+    - climate.pid.autotune: console_thermostat
+    

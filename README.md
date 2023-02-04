@@ -1,16 +1,16 @@
 # ESPHome Fan Controller
 
-This project describes how to build a quiet thermostat controlled fan for cooling your media console, cupboard or other enclosed area with Gaming Consoles (PS5) and Computers.
+This project describes how to build a quiet thermostat controlled fan for cooling your media console, gaming cupboard or anything else.
 
 The software is ESPHome and Home Assistant. The hardware is an ESP32 with a regular 12v 120mm Computer Fan (PWM) and a Temperature Sensor (DHT11).
 
 ## Cost
-The electronic parts are $29 USD including the ESP32. Probably up to $40 once you add some mounting parts and a project box.
+The electronic parts are $29 USD including the ESP32. 
 
 ## Motivation
 My sons's Playstation 5 sits in our TV Console which runs hotter than Sol. Also in that Media Console is a Macmini, a Raspberry Pi and a few other devices. My wife likes to keep the door neat and closed, so it needs some cooling!
 
-I previously had a thermostat which simply toggled the fan on or off if it got too hot. That didn't work for me. This is a smart thermostat which intelligently controls the 12v-fan speed in order to maintain a perfect temperature in your cabinet. It is important to maintain, say, 22% fan speed to keep a cupboard cool than to cycle the fan between 0% and 100% power constantly making wife-unfriendly noise. There is nothing worse than watching a movie and hearing the fan power on.
+I previously had a thermostat which simply toggled the fan on or off if it got too hot. That didn't work for me. Instead, this is a smart thermostat which intelligently controls the 12v-fan speed in order to maintain a perfect temperature in your cabinet. It will hold the fan at the necessary power level (like 22% power) to keep a cupboard cool rather than cycle the fan between 0% and 100% power constantly making wife-unfriendly noise. There is nothing worse than watching a movie and hearing the fan power on at 100% every minute.
 
 !["closed cabinet"](images/fortnite.jpg)
 
@@ -85,23 +85,39 @@ Review the instructions for [the ESPHome Climate Thermostat](https://esphome.io/
 
 Change the device name from ``console-fan`` to whatever seems appropriate. You might want to change the yaml filename as well.
 
-Note that the DHT11 sensor is setup to average the last 15 readings. Each reading takes place every 1.5 seconds. Without this filter the PID controller reacts to every minor sensor movement. If you have a faster sensor like the BME260 you might need to tweak this filter.
+Set the correct pin for your temp sensor. Note that the DHT11 sensor is setup to use an exponential moving average. Without this filter the PID controller reacts to every minor sensor movement. If you have a faster sensor like the BME260 you might need to tweak this filter.
 
 ```yaml
-filters:
-  - sliding_window_moving_average:
-      window_size: 15
-      send_every: 15
-      send_first_at: 1
+  # GET TEMP/HUMIDITY FROM DHT11
+  - platform: dht
+    pin: GPIO33
+    temperature:
+      name: "Temperature"
+      id: console_fan_temperature
+      accuracy_decimals: 3
+
+      # If you don't smooth the temperature readings 
+      # the PID controller over reacts to small changes.
+      filters:
+         - exponential_moving_average:  
+             alpha: 0.1
+             send_every: 1
+
 ```
 
-Also note that my fans have a max power of 80% applied to the fans to control the noise. You might want to remove this maximum.
+Also note that my fans stop working below 13% power, so I set that is the minimum. I have a max power of 80% applied to the fans to minimise the wife-unfriendly noise. You might want to remove this minimum or maximum. Make sure you connect your fan to a PWM capable GPIO. All ESP32 pins that can act as outputs can be used as PWM pins but GPIOs 34-39 can’t generate PWM.
 
 ```yaml
-- platform: ledc
-  id: console_fan_speed
-  pin: 15
-  max_power: 80%
+  - platform: ledc
+    id: console_heat_speed
+    pin: GPIO27
+
+    # 25KHz is standard PWM PC fan frequency, minimises buzzing
+    frequency: "25000 Hz"
+
+    min_power: 13%
+    max_power: 80%
+
 ```
 
 ### Setup your wifi details
@@ -225,7 +241,7 @@ cards:
 <img src="images/details.jpg" width=400>
 
 
-This Lovelace YAML exposes various sensors and switches from the ESP32.
+This dashboard YAML exposes various sensors and switches from the ESP32.
 
 ```yaml
 type: entities
@@ -239,7 +255,7 @@ entities:
   - entity: switch.console_fan_esp32_restart
 ```
 
-- ``console_fan_autotune`` is a switch which starts the [PID tuning](https://esphome.io/components/climate/pid.html#autotuning) process. I ended up abandoning this approach and manually tuning the PID.
+- ``console_fan_autotune`` is a button which starts the [PID tuning](https://esphome.io/components/climate/pid.html#autotuning) process. I ended up abandoning this approach and manually tuning the PID.
 
 - ``console_fan_esp32_restart`` restarts the ESP32 remotely.
 
@@ -285,6 +301,10 @@ Higher numbers like 0.03 will respond much quicker, but it also will cause a lot
 ### Setting the kd parameter - predicting a change
 
 The kd (D in PID) is meant to pre-react and backoff early. Small parameters can help overshoot but does create some fan noise and oscillation. The interwebs says that most (70%) of process controllers don't use the D and just a PI controller.
+
+### Setting the deadband parameters - minimising changes once inside the zone
+
+In my first contribution to ESPHome I added [Deadband to PID Climate](https://esphome.io/components/climate/pid.html#deadband-setup). Follow the instructions there to ensure that your fans stop oscillating once it reachs the correct target temperature.
 
 ### Tell me
 I'm keen to hear what PID parameters works for your fan.
