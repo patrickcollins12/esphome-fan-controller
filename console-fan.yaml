@@ -33,16 +33,17 @@ wifi:
 number:
 
   ## OPTIONAL:
-  # RECEIVE kp,ki and kd parameters from input_text.kx helpers in 
+  # RECEIVE KP, KI and KD parameters from input_text.kx helpers in 
   # Home Assistant. See the PID controller below
   # These helper values will get saved to flash thus permanently over-riding 
   # the initial values set in the PID below.
 
   # KP
   - platform: template
-    name: $friendly_name kp
+    name: kp
     icon: mdi:chart-bell-curve
     restore_value: true
+    initial_value: 0.3
     min_value: 0
     max_value: 50
     step: 0.001
@@ -52,9 +53,10 @@ number:
 
   # KI
   - platform: template
-    name: $friendly_name ki
+    name: ki
     icon: mdi:chart-bell-curve
     restore_value: true
+    initial_value: 0.0015
     min_value: 0
     max_value: 50
     step: 0.0001
@@ -63,14 +65,51 @@ number:
 
   # KD
   - platform: template
-    name: $friendly_name kd
+    name: kd
     icon: mdi:chart-bell-curve
     restore_value: true
+    initial_value: 0.0
     min_value: -50
     max_value: 50
     step: 0.001
     set_action: 
       lambda: id(console_thermostat).set_kd( x );
+
+  # Set threshold low
+  - platform: template
+    name: Deadband Threshold Low
+    icon: mdi:chart-bell-curve
+    restore_value: true
+    initial_value: -1.0
+    min_value: -20
+    max_value: 0
+    step: 0.1
+    set_action: 
+      lambda: id(console_thermostat).set_threshold_low( x );
+
+  # Set threshold high
+  - platform: template
+    name: Deadband Threshold High
+    icon: mdi:chart-bell-curve
+    restore_value: true
+    initial_value: 0.4
+    min_value: 0
+    max_value: 20
+    step: 0.1
+    set_action: 
+      lambda: id(console_thermostat).set_threshold_high( x );
+
+  # Set ki multiplier
+  - platform: template
+    name: Deadband ki Multiplier
+    icon: mdi:chart-bell-curve
+    restore_value: true
+    initial_value: 0.04
+    min_value: 0
+    max_value: .2
+    step: 0.01
+    set_action: 
+      lambda: id(console_thermostat).set_ki_multiplier( x );
 
 text_sensor:
 
@@ -151,19 +190,9 @@ sensor:
     accuracy_decimals: 2
 
   - platform: template
-    name: $friendly_name zero 
-    id: zero_value
-    update_interval: 60s
-    lambda: |-
-      return 0;
-
-  - platform: template
-    name: $friendly_name zero percent
-    unit_of_measurement: "%"
-    id: zero_value_percent
-    update_interval: 60s
-    lambda: |-
-      return 0;
+    name: $friendly_name is in deadband
+    id: in_deadband_term
+    accuracy_decimals: 0
 
   # GET TEMP/HUMIDITY FROM DHT11
   - platform: dht
@@ -209,11 +238,12 @@ output:
     min_power: 13%
     max_power: 80%
 
-# Good for debugging, you can manually set the fan speed.
-fan:
-  - platform: speed
-    output: console_fan_speed
-    name: "Console Fan Speed"
+# Good for debugging, you can manually set the fan 
+# speed. Just make sure the Climate device is set to off or it will keep getting overridden.
+# fan:
+#   - platform: speed
+#     output: console_fan_speed
+#     name: "Console Fan Speed"
 
 # Expose a PID-controlled Thermostat
 # Manual: https://esphome.io/components/climate/pid.html
@@ -242,6 +272,9 @@ climate:
       - sensor.template.publish:
           id: o_term
           state: !lambda 'return -id(console_thermostat).get_output_value()* 100.0;'
+      - sensor.template.publish:
+          id: in_deadband_term
+          state: !lambda 'return id(console_thermostat).in_deadband();'
       - sensor.template.publish:
           id: e_term
           state: !lambda 'return -id(console_thermostat).get_error_value();'
