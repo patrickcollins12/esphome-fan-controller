@@ -12,6 +12,11 @@ esphome:
   #       ESP_LOGI("main", "!!!!!! kp from boot %f", id("console_fan_kp") );
   #       id(console_thermostat).set_kp( id("$friendly_name kp") );
 
+# Throttle writing parameters to the internal flash memory to reduce ESP memory wear / degradation
+preferences:
+  flash_write_interval: 15min
+
+
 globals:
   - id: dhttemp
     type: float
