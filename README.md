@@ -59,14 +59,14 @@ It appears that Corsair and Noctua fans behave as expected so you might want to 
 However, if your fan does behave this way, you can use a MOSFET like the FQP30N06L to add an on/off switch to another GPIO pin to completely cut the power when the PWM output is at 0%. If you need a schematic, please [post an issue](https://github.com/patrickcollins12/esphome-fan-controller/issues/new) and we can help out.
 
 ## Wiring Diagram
-<img src="images/12v%20fan%20controller.png">
+<img src="images/12v%20fan%20controller%20w%20tach.png">
 
 Some important notes:
 - connect the fan PWM pin to a PWM GPIO
 - turn the knob on the buck converter with a screwdriver to make it output exactly 3.3v. You'll need a multimeter to measure that output.
 - ensure the 12v and 3.3v grounds are connected together.
-- the unused pin on the fan is the "Tach" pin. You can connect this to an input pin of your choice (GPIO25 in the example config) and it will send 1-2 pulses per full turn (depending on the fan). You can use this to monitor actual RPM of the fan and detect a defect, blocked rotor, etc.
-- you could easily skip the Buck converter and use two power sources 3.3v and 12v. 
+- the green line is the "Tach" or tachometer pin. It is optional to connect this. You can connect this to a PWM input pin of your choice (GPIO25 in the example config) and it will send 1-2 pulses per full turn (depending on the fan). You can use this to monitor actual RPM of the fan and detect a fan defect, blocked rotor, etc.
+- you could easily skip the Buck converter and use two separate power sources 3.3v and 12v. 
 - the fritzing diagram shows a 4-pin DHT-11, when in fact I have the simpler 3-pin version as shown in the parts list. The 4-pin version might need a pullup resistor, haven't tried it.
 
 ## Installing the software onto the ESP32
