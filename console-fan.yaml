@@ -3,6 +3,11 @@ substitutions:
 
 esphome:
   name: console-fan
+
+# Throttle writing parameters to the internal flash memory to reduce ESP memory wear / degradation
+preferences:
+  flash_write_interval: 15min
+
  
 #########################
 # ESP32 AND NETWORK SETUP
@@ -156,6 +161,20 @@ sensor:
                 (minutes ? to_string(minutes) + "m " : "") +
                 (to_string(seconds) + "s")
               ).c_str();
+
+  # Read the Tacho PIN and show measured RPM as a sensor (only with 4-pin PWM fans!)
+
+  - platform: pulse_counter
+    pin: 
+      number: GPIO25   # Connect to any input PIN on the ESP
+      mode: INPUT_PULLUP
+    unit_of_measurement: 'RPM'
+    id: fan_speed
+    name: $friendly_name Fan Speed
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.5  # Depending on how many pulses the fan sends per round - should be 0.5 or 1 - try...
+
 
 ########################################################
 # START THE FAN CONTROLLER SETUP
