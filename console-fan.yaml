@@ -243,11 +243,11 @@ sensor:
     type: COOL
 
 output:
-  # Wire this pin (15) into the PWM pin of your 12v fan
+  # Wire this pin (13) into the PWM pin of your 12v fan
   # ledc is the name of the pwm output system on an esp32
   - platform: ledc
     id: console_fan_speed
-    pin: 15
+    pin: GPIO13
 
     # 25KHz is standard PC fan frequency, minimises buzzing
     frequency: "25000 Hz" 
@@ -349,6 +349,6 @@ time:
 button:
 - platform: template
   name: "PID Climate Autotune"
-  on_press:
+  on_press: 
     - climate.pid.autotune: console_thermostat
     
