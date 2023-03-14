@@ -65,7 +65,7 @@ Some important notes:
 - connect the fan PWM pin to a PWM GPIO
 - turn the knob on the buck converter with a screwdriver to make it output exactly 3.3v. You'll need a multimeter to measure that output.
 - ensure the 12v and 3.3v grounds are connected together.
-- the green line is the "Tach" or tachometer pin. It is optional to connect this. You can connect this to a PWM input pin of your choice (GPIO25 in the example config) and it will send 1-2 pulses per full turn (depending on the fan). You can use this to monitor actual RPM of the fan and detect a fan defect, blocked rotor, etc.
+- the green line is the "Tach" or tachometer pin. It is optional to connect this. You can connect this to a PWM input pin of your choice (GPIO25 in the example config) and it will send 1-2 pulses per full turn (depending on the fan). You can use this to monitor actual RPM of the fan and detect a fan defect, blocked rotor, etc. You will need one PWM input for each tach on each fan.
 - you could easily skip the Buck converter and use two separate power sources 3.3v and 12v. 
 - the fritzing diagram shows a 4-pin DHT-11, when in fact I have the simpler 3-pin version as shown in the parts list. The 4-pin version might need a pullup resistor, haven't tried it.
 
