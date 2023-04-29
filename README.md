@@ -10,7 +10,7 @@ The electronic parts are $29 USD including the ESP32.
 ## Motivation
 My sons's Playstation 5 sits in our TV Console which runs hotter than Sol. Also in that Media Console is a Macmini, a Raspberry Pi and a few other devices. My wife likes to keep the door neat and closed, so it needs some cooling!
 
-I previously had a thermostat which simply toggled the fan on or off if it got too hot. That didn't work for me. Instead, this is a smart thermostat which intelligently controls the 12v-fan speed in order to maintain a perfect temperature in your cabinet. It will hold the fan at the necessary power level (like 22% power) to keep a cupboard cool rather than cycle the fan between 0% and 100% power constantly making wife-unfriendly noise. There is nothing worse than watching a movie and hearing the fan power on at 100% every minute.
+I previously had a thermostat which simply toggled the fan when the temperature crossed a threshold. That didn't work for me because the fans were loud and toggling on/off. Very wife-unfriendly and annoying when you're watching a movie to hear the fan buzzing every other minute. The process led me to this smart thermostat which intelligently controls the speed of the 12v-fan to maintain a perfect temperature in your cabinet. It will find and hold the fan at the necessary power level (like 22% power) to keep a cupboard cool and adjust as necessary.
 
 !["closed cabinet"](images/fortnite.jpg)
 
