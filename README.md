@@ -56,7 +56,7 @@ As you'll see below, our fans are being powered by the PWM pin. Our expectation 
 
 It appears that Corsair and Noctua fans behave as expected so you might want to stick with them.
 
-However, if your fan does behave this way, you can use a MOSFET like the FQP30N06L to add an on/off switch to another GPIO pin to completely cut the power when the PWM output is at 0%. If you need a schematic, please [post an issue](https://github.com/patrickcollins12/esphome-fan-controller/issues/new) and we can help out.
+However, if your fan does behave this way, you can use a MOSFET to turn it off. There are ([instructions here for how to do this](https://github.com/patrickcollins12/esphome-fan-controller/issues/17#issuecomment-1557136383)). Please post your progress to that issue.
 
 ## Wiring Diagram
 <img src="images/12v%20fan%20controller%20w%20tach.png">
