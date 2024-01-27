@@ -235,12 +235,13 @@ sensor:
     # the DHT11 can only be read every 1s. Use 1.3s to be safe.
     update_interval: 1.3s
 
-  # Take the "COOL" value of the pid and send 
-  # it to the frontend to graph the output voltage
-  - platform: pid
+  # Every time the fan speed is updated, this sensor will
+  # also be updated for displaying on the frontend. 
+  # See proxy_output.
+  - platform: template
     name: "Fan Speed (PWM Voltage)"
-    climate_id: console_thermostat
-    type: COOL
+    unit_of_measurement: "%"
+    id: fan_speed_pwm_voltage
 
 output:
   # Wire this pin (13) into the PWM pin of your 12v fan
@@ -257,12 +258,30 @@ output:
     min_power: 13%
     max_power: 80%
 
-# Good for debugging, you can manually set the fan 
-# speed. Just make sure the Climate device is set to off or it will keep getting overridden.
-# fan:
-#   - platform: speed
-#     output: console_fan_speed
-#     name: "Console Fan Speed"
+  # This proxy output takes its input
+  # if the manual fan control is on, use the level from that
+  # otherwise use the PID control value.
+  # Then publish the result to the fan (ledc) and 
+  # also publish to the template output sensor
+  - platform: template
+    id: proxy_output
+    type: float
+    write_action:
+      lambda: |-
+        float write_val = 
+          (id(manual_fan_control).state) ?
+            id(manual_fan_control).speed / 100.0:
+            write_val = state*1.0;
+        id(console_fan_speed).set_level(write_val);
+        id(fan_speed_pwm_voltage).publish_state(write_val*100.0);
+
+# If you turn this on, you can manually set the fan speed.
+# The PID will be ignored. This is done via the proxy_output.
+fan:
+  - platform: speed
+    id: manual_fan_control
+    output: proxy_output
+    name: "Manual Fan Speed"
 
 # Expose a PID-controlled Thermostat
 # Manual: https://esphome.io/components/climate/pid.html
@@ -274,7 +293,8 @@ climate:
 
     # It is summer right now, so 30c is a decent target.
     default_target_temperature: 30°C
-    cool_output: console_fan_speed
+    cool_output: proxy_output
+    # cool_output: console_fan_speed
 
     # ON state change, publish the values to the x_term numbers defined 
     # above, so that they can be viewed in HA

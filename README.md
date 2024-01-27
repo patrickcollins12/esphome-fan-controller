@@ -24,6 +24,7 @@ The main features are:
 - **no screen** is needed on the device itself, all management is done via Home Assistant
 - my system uses two fans for extra cooling. Depending on how much air you need to draw through your enclosed space you could use 1 or 2 fans
 - it is easily extendable to control up to 10 separate enclosed spaces with separate temperature sensors as well. You're only limited by the Amps of your 12v Power Brick and the pins on your ESP32.
+- **manual speed control** over ride if you don't want to use PID Control
 - **no coding is needed**. Just some configuration in YAML files. In fact this repo only contains 1 file ``config-fan.yaml``.
 - **No resistors, capacitors or difficult soldering needed**. The fan and the temperature sensor plug straight onto the pins of the ESP32. Although I did mount mine on a perfboard for cleanliness and put it in a case.
 
@@ -193,42 +194,77 @@ You also need to setup the dashboard. I'll explain those two steps below.
 
 Here is my full dashboard in Home Assistant.
 
-Let's go through them section by section.
+For this full dashboard configuration, checkout ```lovelace-dashboard.yaml```
+
+Let's go through this page section-by-section.
 
 ### The Primary Controls
 
 <img src="images/primary-controls.jpg" width=400>
-
-By clicking the thermostat you can turn on/off the thermostat and fan and adjust the target temperature which will be persisted to flash on the ESP32.
-
+ 
 ```yaml
 type: entities
-title: Console Fan
 entities:
+  - entity: fan.manual_fan_speed
   - entity: sensor.fan_speed_pwm_voltage
-  - entity: climate.console_fan_thermostat
-  - entity: sensor.contact_sensor_1_temperature
-    name: Room Temperature
-  - entity: sensor.openweathermap_temperature
-    name: Outside temperature
-  - entity: number.console_fan_kp
-  - entity: number.console_fan_ki
-  - entity: number.console_fan_kd
-  ```
+```
+
+- You can turn on  `manual fan speed` and use this fan control to adjust the speed manually. 
 
 - The ``Fan Speed (PWM Voltage)`` is the % of voltage being sent out via PWM to the fan controller. At 100% it will be sending 12v, at 50% it will be sending 6v.
 
-- The ``Console Fan Thermostat`` is a controllable thermostat, by clicking it you can alter the target temperature and turn the fan on/off.
+If `manual fan speed` is off, this next card stack will conditionally display.
 
-- The Room and Outside temperatures are from other sensors in my house for reference.
+```yaml
+type: conditional
+conditions:
+  - condition: state
+    entity: fan.manual_fan_speed
+    state_not: 'on'
+card:
+  type: vertical-stack
+  cards:
+    - type: entities
+      title: Thermostat Fan (PID)
+      entities:
+        - entity: climate.console_fan_thermostat
+        - entity: sensor.openweathermap_temperature
+          name: open weather
+        - entity: sensor.contact_sensor_1_device_temperature
+          name: room temperature
+    - type: vertical-stack
+      cards:
+        - type: glance
+          entities:
+            - entity: sensor.console_fan_is_in_deadband
+              name: in_deadband?
+            - entity: sensor.console_fan_error_value
+              name: error
+              icon: mdi:equal
+        - type: glance
+          show_icon: false
+          entities:
+            - entity: sensor.console_fan_output_value
+              name: output
+            - entity: sensor.console_fan_p_term
+              name: p_term
+            - entity: sensor.console_fan_i_term
+              name: i_term
+            - entity: sensor.console_fan_d_term
+              name: d_term
+```
+
+- The `Console Fan Thermostat` is a controllable thermostat, by clicking it you can alter the target temperature and turn the fan on/off. These changes will be persisted to flash on the ESP32.
+
+- The `Open Weather` and `Room` temperatures are from other sensors in my house for reference.
 
 - The ``kp, ki and kd`` inputs are exposed from the device. Your ESP32 will be automatically receiving changes to these values to control the behavior of the PID controller. While you could tune these from the config.yaml it requires a compile, upload and reboot cycle each time. This is inconvenient and best to tweak in real-time. We want to expose these 3 parameters to a Home Assistant dashboard.
 
 ### The Graphs
 
-<img src="images/graphs.jpg" width=400>
-
 Add the fan speed and the thermostat to two separate graphs. I've also added my room temperature from a separate device for comparison.
+
+<img src="images/graphs.jpg" width=400>
 
 ```yaml
 type: vertical-stack
@@ -271,6 +307,40 @@ entities:
 - ``console_fan_autotune`` is a button which starts the [PID tuning](https://esphome.io/components/climate/pid.html#autotuning) process. I ended up abandoning this approach and manually tuning the PID.
 
 - ``console_fan_esp32_restart`` restarts the ESP32 remotely.
+
+### PID Parameters - setting the PID parameters from the frontend
+
+This dashboard allows you to configure the PID parameters. See the next section for how to set these parameters.
+This dashboard will conditionally disappear if `manual fan speed` control is `on`.
+
+<img src="images/pid-controls.jpg" width=400>
+
+```yaml
+type: conditional
+conditions:
+  - condition: state
+    entity: fan.manual_fan_speed
+    state_not: 'on'
+card:
+  type: vertical-stack
+  cards:
+    - type: entities
+      entities:
+        - entity: number.kp
+        - entity: number.ki
+        - entity: number.kd
+        - entity: button.pid_climate_autotune
+      title: PID Controls Setup
+    - type: entities
+      entities:
+        - entity: number.deadband_threshold_low
+          name: Threshold Low
+        - entity: number.deadband_threshold_high
+          name: Threshold High
+        - entity: number.deadband_ki_multiplier
+          name: ki multiplier
+      title: Deadband Parameters
+```
 
 ## Configuring the PID Parameters
 
