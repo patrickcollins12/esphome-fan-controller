@@ -76,7 +76,7 @@ Some important notes:
 
 ### Get this repo
 Clone this github repository.
-From the command line cd into the directory
+From the command line and then cd into the directory
 
 ```
 git clone https://github.com/patrickcollins12/esphome-fan-controller.git
