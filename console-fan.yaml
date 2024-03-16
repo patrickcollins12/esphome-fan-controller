@@ -258,6 +258,9 @@ output:
     min_power: 13%
     max_power: 80%
 
+    # At 0, actually turn it off, otherwise the power keeps going.
+    zero_means_zero: true
+
   # This proxy output takes its input
   # if the manual fan control is on, use the level from that
   # otherwise use the PID control value.
