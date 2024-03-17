@@ -53,6 +53,8 @@ This is a screenshot from Home Assistant. I'll show you how to setup this dashbo
 - **ESP32**. You can use any ESP32. I'm using a NodeMCU compatible board. Mine cost $4 from Aliexpress<br><img src="images/nodemcu-esp32.png" width="100"> 
 
 ## Choosing a Good Fan
+You need a 4-pin fan which has PWM. 3-pin fans aren't acceptable, they are just on/off with tachometer sensor.
+
 As you'll see below, our fans are being powered by the PWM pin. Our expectation is that the fans stop spinning at 0% power. Some people have reported that some fans don't stop running at 0% power (or worse that they stop completely at 100% power which is weird). 
 
 It appears that Corsair and Noctua fans behave as expected so you might want to stick with them.
@@ -74,7 +76,7 @@ Some important notes:
 
 ### Get this repo
 Clone this github repository.
-From the command line cd into the directory
+From the command line and then cd into the directory
 
 ```
 git clone https://github.com/patrickcollins12/esphome-fan-controller.git
