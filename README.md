@@ -72,7 +72,7 @@ Some important notes:
 - you could easily skip the Buck converter and use two separate power sources 3.3v and 12v. 
 - the fritzing diagram shows a 4-pin DHT-11, when in fact I have the simpler 3-pin version as shown in the parts list. The 4-pin version might need a pullup resistor, haven't tried it.
 
-## Common Wiring Error - joining grounds 
+## Common Wiring Error - not joining grounds 
 
 NOTE: if you don't join your 3.3v and 12v ground wires together your fan will keep spinning. At least 5 different builds have reported this issue. 
 
