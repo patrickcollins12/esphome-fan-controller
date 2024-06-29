@@ -348,7 +348,7 @@ card:
       title: Deadband Parameters
 ```
 
-## Configuring the PID Parameters
+## Tuning your fan - by configuring the PID Parameters
 
 The thermostat is controlled using a standard Process Control system called a PID. 
 
