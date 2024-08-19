@@ -163,18 +163,28 @@ sensor:
               ).c_str();
 
   # Read the Tacho PIN and show measured RPM as a sensor (only with 4-pin PWM fans!)
-
+  # See instructions here: https://esphome.io/components/sensor/pulse_counter.html
   - platform: pulse_counter
     pin: 
       number: GPIO25   # Connect to any input PIN on the ESP
       mode: INPUT_PULLUP
     unit_of_measurement: 'RPM'
     id: fan_speed
-    name: $friendly_name Fan Speed
+    name: $friendly_name Fan Speed 1
     accuracy_decimals: 0
     filters:
       - multiply: 0.5  # Depending on how many pulses the fan sends per round - should be 0.5 or 1 - try...
 
+  - platform: pulse_counter
+    pin: 
+      number: GPIO26   # Connect to any input PIN on the ESP
+      mode: INPUT_PULLUP
+    unit_of_measurement: 'RPM'
+    id: fan_speed
+    name: $friendly_name Fan Speed 2
+    accuracy_decimals: 0
+    filters:
+      - multiply: 0.5  # Depending on how many pulses the fan sends per round - should be 0.5 or 1 - try...
 
 ########################################################
 # START THE FAN CONTROLLER SETUP
