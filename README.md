@@ -37,6 +37,9 @@ This is a screenshot from Home Assistant. I'll show you how to setup this dashbo
 !["controller"](images/real1.jpg)
 !["fans"](images/real2.jpg)
 
+## Examples from other users
+https://github.com/patrickcollins12/esphome-fan-controller/issues/34
+
 
 ## Parts (~$29 USD)
 
