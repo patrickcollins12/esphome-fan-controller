@@ -26,7 +26,10 @@ logger:
 
 # default HA integration, OTA updater and backup http web portal
 api:
+
 ota:
+  - platform: esphome
+  
 wifi:
 
   # Read the wifi/pass from secrets.yaml:
@@ -180,7 +183,7 @@ sensor:
       number: GPIO26   # Connect to any input PIN on the ESP
       mode: INPUT_PULLUP
     unit_of_measurement: 'RPM'
-    id: fan_speed
+    id: fan_speed_2
     name: $friendly_name Fan Speed 2
     accuracy_decimals: 0
     filters:
