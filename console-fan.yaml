@@ -286,8 +286,7 @@ output:
       lambda: |-
         float write_val = 
           (id(manual_fan_control).state) ?
-            id(manual_fan_control).speed / 100.0:
-            write_val = state*1.0;
+            id(manual_fan_control).speed / 100.0 : state*1.0;
         id(console_fan_speed).set_level(write_val);
         id(fan_speed_pwm_voltage).publish_state(write_val*100.0);
 
