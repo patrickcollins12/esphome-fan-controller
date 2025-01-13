@@ -5,7 +5,7 @@ This project describes how to build a quiet thermostat controlled fan for coolin
 The software is ESPHome and Home Assistant. The hardware is an ESP32 with a regular 12v 120mm Computer Fan (PWM) and a Temperature Sensor (DHT11).
 
 ## Cost
-The electronic parts are $29 USD including the ESP32. 
+The electronic parts are $29 USD including the ESP32. You will also need a multimeter.
 
 ## Motivation
 My sons's Playstation 5 sits in our TV Console which runs hotter than Sol. Also in that Media Console is a Macmini, a Raspberry Pi and a few other devices. My wife likes to keep the door neat and closed, so it needs some cooling!
@@ -54,6 +54,10 @@ https://github.com/patrickcollins12/esphome-fan-controller/issues/34
 - **LM2596 Buck Converter** - to convert 12v down to 3.3v. Cost $1.50 each (normally in packs of 6-10)<br><img src="images/LM2596.png" width="100"> 
 
 - **ESP32**. You can use any ESP32. I'm using a NodeMCU compatible board. Mine cost $4 from Aliexpress<br><img src="images/nodemcu-esp32.png" width="100"> 
+
+- ** Jumper wires**. Some jumper wires to connect the ESP32 to the various parts here. $1. <br><img src="images/jumperwires.png" width="100">
+
+You will also need a multimeter. Optionally, if you want to move this beyond a prototype you will need some soldering equipment and a 3d printer for a case or to buy a housing.
 
 ## Choosing a Good Fan
 You need a 4-pin fan which has PWM. 3-pin fans aren't acceptable, they are just on/off with tachometer sensor.
