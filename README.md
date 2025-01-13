@@ -55,7 +55,7 @@ https://github.com/patrickcollins12/esphome-fan-controller/issues/34
 
 - **ESP32**. You can use any ESP32. I'm using a NodeMCU compatible board. Mine cost $4 from Aliexpress<br><img src="images/nodemcu-esp32.png" width="100"> 
 
-- ** Jumper wires**. Some jumper wires to connect the ESP32 to the various parts here. $1. <br><img src="images/jumperwires.png" width="100">
+- **Jumper wires**. Some jumper wires to connect the ESP32 to the various parts here. $1. <br><img src="images/jumperwires.png" width="100">
 
 You will also need a multimeter. Optionally, if you want to move this beyond a prototype you will need some soldering equipment and a 3d printer for a case or to buy a housing.
 
