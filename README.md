@@ -1,6 +1,6 @@
 # ESPHome Fan Controller
 
-This project describes how to build a quiet thermostat controlled fan for cooling your media console, gaming cupboard or anything else.
+This project describes how to build a whisper quiet thermostat-controlled fan for cooling your media console, gaming cupboard or that dying star in your networking cabinet.
 
 The software is ESPHome and Home Assistant. The hardware is an ESP32 with a regular 12v 120mm Computer Fan (PWM) and a Temperature Sensor (DHT11).
 
@@ -10,7 +10,7 @@ The electronic parts are $29 USD including the ESP32. You will also need a multi
 ## Motivation
 My sons's Playstation 5 sits in our TV Console which runs hotter than Sol. Also in that Media Console is a Macmini, a Raspberry Pi and a few other devices. My wife likes to keep the door neat and closed, so it needs some cooling!
 
-I previously had a thermostat which simply toggled the fan when the temperature crossed a threshold. That didn't work for me because the fans were loud and toggling on/off. Very wife-unfriendly and annoying when you're watching a movie to hear the fan buzzing every other minute. The process led me to this smart thermostat which intelligently controls the speed of the 12v-fan to maintain a perfect temperature in your cabinet. It will find and hold the fan at the necessary power level (like 22% power) to keep a cupboard cool and adjust as necessary.
+I used to have a thermostat that mindlessly flipped the fan on and off whenever the temperature crossed a threshold. Not great, the fan cycling was a mood killer on movie nights and dismally failed wife approval. Enter this smart thermostat: instead of brute-force toggling, it smoothly adjusts the 12V fan speed to maintain the perfect temperature. It’ll settle on just the right power level (say, 22% power) to keep things cool without the unnecessary drama.
 
 !["closed cabinet"](images/fortnite.jpg)
 
