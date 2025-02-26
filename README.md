@@ -22,11 +22,11 @@ The main features are:
 - uses ESP32's Wifi to connect to Home Assistant for control and reporting
 - the ESP32 is standalone and so the cooling function will continue to operate without Wifi. Doesn't need HomeAssistant or Wifi to operate. Wifi is only needed for setup, manual control and reporting.
 - **no screen** is needed on the device itself, all management is done via Home Assistant
-- my system uses two fans for extra cooling. Depending on how much air you need to draw through your enclosed space you could use 1 or 2 fans
-- it is easily extendable to control up to 10 separate enclosed spaces with separate temperature sensors as well. You're only limited by the Amps of your 12v Power Brick and the pins on your ESP32.
+- my system uses two fans for extra cooling. Depending on how much air you need to draw through your enclosed space you could use 1, 2, 4, 10 .. n fans.
+- one esp32 can control up to 10 independent enclosures each with separate temperature sensors and fans. You're only limited by the Amps of your 12v Power Bricks and the 10 pwm pins on your ESP32.
 - **manual speed control** over ride if you don't want to use PID Control
 - **no coding is needed**. Just some configuration in YAML files. In fact this repo only contains 1 file ``config-fan.yaml``.
-- **No resistors, capacitors or difficult soldering needed**. The fan and the temperature sensor plug straight onto the pins of the ESP32. Although I did mount mine on a perfboard for cleanliness and put it in a case.
+- **No resistors, capacitors or difficult soldering needed**. The fan and the temperature sensor plug straight onto the pins of the ESP32. Although I did solder mount mine on a perfboard for cleanliness and put it in a case.
 
 !["graphs"](images/demo.jpg)
 
