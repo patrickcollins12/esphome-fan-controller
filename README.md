@@ -43,7 +43,7 @@ https://github.com/patrickcollins12/esphome-fan-controller/issues/34
 
 ## Parts (~$29 USD)
 
-- **DHT11** - temperature and humidity sensor. I'm using the one on a board with 3-pins. Cost $1.50 USD<br><img src="images/dht-11.png" width="100">
+- **DHT11** - temperature and humidity sensor. I'm using the one on a board with 3-pins. Cost $0.20 USD<br><img src="images/dht-11.png" width="100">
 
 - **12v PWM 4-pin Computer Fan** - I'm using 2 x [120mm Corsair fans](https://www.corsair.com/us/en/Categories/Products/Fans/Magnetic-Levitation-Fans/ml-config/p/CO-9050039-WW). Any 12v PWM-controllable fan should work. Cost $8-$15 USD. I recommend getting high quality fans if you care about noise and need to move a lot of air<br><img src="images/corsair-fan.png" width="100">. 
 
@@ -51,13 +51,13 @@ https://github.com/patrickcollins12/esphome-fan-controller/issues/34
 
 - **12v DC Female Jack** - with wire outlets. You can normally buy these with the Power Adapter<br><img src="images/12v%20jack.jpg" width="100"> or <img src="images/12v%20jack%202.png" width="100"> 
 
-- **LM2596 Buck Converter** - to convert 12v down to 3.3v. Cost $1.50 each (normally in packs of 6-10)<br><img src="images/LM2596.png" width="100"> 
+- **LM2596 Buck Converter** - to convert 12v down to 3.3v. Cost $0.21 each (normally in packs of 6-10)<br><img src="images/LM2596.png" width="100"> 
 
-- **ESP32**. You can use any ESP32. I'm using a NodeMCU compatible board. Mine cost $4 from Aliexpress<br><img src="images/nodemcu-esp32.png" width="100"> 
+- **ESP32**. You can use any ESP32. I'm using a NodeMCU compatible board. Mine cost $1.50 USD from Aliexpress. Note it [will also work on a Raspberry Pi Pico W](https://github.com/patrickcollins12/esphome-fan-controller/discussions/50).<br><img src="images/nodemcu-esp32.png" width="100"> 
 
 - **Jumper wires**. Some jumper wires to connect the ESP32 to the various parts here. $1. <br><img src="images/jumperwires.png" width="100">
 
-You will also need a multimeter. Optionally, if you want to move this beyond a prototype you will need some soldering equipment and a 3d printer for a case or to buy a housing.
+You will also need a multimeter to adjust the output of the buck converter. Optionally, if you want to move this beyond a prototype you will need some soldering equipment and a 3d printer for a case or to buy a housing.
 
 ## Choosing a Good Fan
 You need a 4-pin fan which has PWM. 3-pin fans aren't acceptable, they are just on/off with tachometer sensor.
@@ -103,6 +103,8 @@ Ensure the pins are set correctly for the PWM Fan (ledc) and the DHT-11.
 Review the instructions for [the ESPHome Climate Thermostat](https://esphome.io/components/climate/index.html), [ESPHome PID Climate Thermostat](https://esphome.io/components/climate/pid.html) and the [DHT-11 sensor](https://esphome.io/components/sensor/dht.html).
 
 Change the device name from ``console-fan`` to whatever seems appropriate. You might want to change the yaml filename as well.
+
+If you want to use a Raspberry Pi Pico instead of an ESP32, change the board and platform as well [according to this discussion](https://github.com/patrickcollins12/esphome-fan-controller/discussions/50).
 
 ### Setup your temperature sensor
 
