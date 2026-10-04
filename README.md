@@ -25,6 +25,8 @@ The main features are:
 - my system uses two fans for extra cooling. Depending on how much air you need to draw through your enclosed space you could use 1, 2, 4, 10 .. n fans.
 - one esp32 can control up to 10 independent enclosures each with separate temperature sensors and fans. You're only limited by the Amps of your 12v Power Bricks and the 10 pwm pins on your ESP32.
 - **manual speed control** over ride if you don't want to use PID Control
+- **fan calibration and health status**: one button measures your fan's real min/max RPM and its min effective power, and a status sensor tells you what the fan is actually doing (including detecting a failed or degrading fan)
+- **PID tuning persists across reboots**, and the **autotune result is saved and shown in Home Assistant** instead of only in the logs
 - **no coding is needed**. Just some configuration in YAML files. In fact this repo only contains 1 file ``config-fan.yaml``.
 - **No resistors, capacitors or difficult soldering needed**. The fan and the temperature sensor plug straight onto the pins of the ESP32. Although I did solder mount mine on a perfboard for cleanliness and put it in a case.
 
@@ -149,6 +151,25 @@ Also note that my fans stop spinning below 13% power, so I set that as the minim
 
 ```
 
+### Calibrate your fan
+
+The fan characteristics (min/max RPM and min/max PWM power) are exposed to Home Assistant as number entities in the **Configuration** section of the device, and saved to flash. The values in the `substitutions` block at the top of the YAML are only the initial ones.
+
+Not every PWM fan stops at 0% PWM. Many keep spinning at their minimum speed (500-700 RPM is common), so "0%" in the PWM sensor does not mean the fan is stopped. Check your fan's datasheet for a "0 RPM" or "0dB" mode if you need it to stop completely.
+
+Press **Calibrate Fan** (Configuration section, takes about 7 minutes). On fan 1 it:
+
+1. Measures the RPM at 0% PWM and saves it to *Fan Min RPM*.
+2. Sweeps the raw PWM from 5% to 50% in 5% steps and saves to *Fan Min Power* the last step where the RPM had not risen yet (above the minimum by 50 RPM or 8%, whichever is larger). Below that power the PID would be changing a value that has no effect on the fan. For a fan with a 0 RPM mode, it saves the first step where the fan starts.
+3. Measures the RPM at 100% PWM and saves it to *Fan Max RPM*.
+
+Each measurement waits for the speed to settle and discards the transition reading. The PID and manual control are paused while it runs, and *Fan Status* shows the current phase. The result is shown in the *Fan Calibration* sensor (Diagnostic section), e.g. `OK: 690 - 1600 RPM, min power 25%`.
+
+Two sensors then show the truth on the dashboard:
+
+- **Fan Status**: `Regulating`, `Minimum (does not stop)`, `Stopped`, `Calibrating: ...` (with the current phase), `Tuning PID`, and two alerts: `WARNING: spinning slow` (below half its minimum RPM: a bearing or motor degrading) and `FAULT: stopped` (0 RPM on a fan that should never stop). These are worth an automation that notifies your phone.
+- **Fan Actual Speed**: the measured RPM as a % of the max RPM. Unlike *Fan Speed (PWM Voltage)*, which is the command sent to the fan, this is what the fan is really doing.
+
 ### Setup your wifi details
 
 ``mv secrets-sample.yaml secrets.yaml``
@@ -201,6 +222,8 @@ If the above steps worked correctly, the device will be auto-discovered by Home 
 
 Multiple sensors and switches are exposed by the ESPHome software.
 
+Entities are grouped by how often you use them. The thermostat, manual fan speed and the temperature, humidity and fan sensors are the everyday controls. The PID parameters, fan characteristics and the autotune, reset and calibration buttons are in the device's **Configuration** section. The PID internals (p/i/d terms, output, error, deadband), calibration results, wifi and uptime are in **Diagnostic**. Configuration and diagnostic entities are hidden from auto-generated dashboards, but still work in your own cards.
+
 You also need to setup the dashboard. I'll explain those two steps below.
 
 ## Setting up the Home Assistant Dashboard
@@ -251,7 +274,7 @@ card:
       cards:
         - type: glance
           entities:
-            - entity: sensor.console_fan_is_in_deadband
+            - entity: binary_sensor.console_fan_is_in_deadband
               name: in_deadband?
             - entity: sensor.console_fan_error_value
               name: error
@@ -399,6 +422,20 @@ Higher numbers like 0.03 will respond much quicker, but it also will cause a lot
 ### Setting the kd parameter - predicting a change
 
 The kd (D in PID) is meant to pre-react and backoff early. Small parameters can help overshoot but does create some fan noise and oscillation. The interwebs says that most (70%) of process controllers don't use the D and just a PI controller.
+
+### Using the autotune
+
+Press **PID Climate Autotune**. The PID oscillates the fan between full and minimum around the target temperature, measures the oscillation and calculates kp, ki and kd. This takes hours on a slow system like a cabinet.
+
+Before starting, make sure the target temperature is reachable both ways (the temperature must be able to go above and below it), and turn manual fan speed off. When it finishes, the new values are saved to the kp/ki/kd numbers automatically and the *PID Autotune Result* sensor shows the old and new values, so you can go back if you don't like them. If it has not finished after 8 hours it is considered failed and the previous values are kept. The nightly restart is skipped while it runs.
+
+### PID parameters survive reboots
+
+Number entities restore their value from flash on boot but do not run their `set_action`, so the PID used to fall back to the YAML `control_parameters` after every reboot (including the nightly one) while Home Assistant kept showing the tuned values. The `on_boot` block now re-applies them.
+
+### Integral windup
+
+If the target temperature is unreachable (e.g. lower than the room temperature), the integral term keeps accumulating, and when the temperature finally drops the fan stays at full speed for a long time while it unwinds. `min_integral: -1.0` caps it. Press **Reset PID** to clear it after testing with an unrealistic target.
 
 ### Setting the deadband parameters - minimising changes once inside the zone
 

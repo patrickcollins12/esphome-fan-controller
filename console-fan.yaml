@@ -1,8 +1,38 @@
 substitutions:
   friendly_name: Console Fan
 
+  # Fan characteristics: INITIAL values only.
+  # They are exposed to Home Assistant as number entities (Configuration
+  # section of the device) and saved to flash. After the first boot, edit
+  # them from Home Assistant: changing them here will not override the
+  # saved values. The "Calibrate Fan" button measures the RPM ones and the
+  # min power.
+  fan_rpm_min: "0"       # RPM at 0% PWM (0 if your fan stops at 0%)
+  fan_rpm_max: "2000"    # RPM at 100% PWM
+  fan_pwm_min: "13"      # % below which the fan speed does not change
+  fan_pwm_max: "80"      # % PWM ceiling
+
 esphome:
   name: console-fan
+  # On boot, number entities restore their value from flash but do NOT run
+  # their set_action, so the PID would silently fall back to the YAML values
+  # after every reboot (including the nightly one) while Home Assistant still
+  # shows the tuned ones. Re-apply them here.
+  on_boot:
+    priority: -100
+    then:
+      - lambda: |-
+          auto t = id(console_thermostat);
+          if (!isnan(id(pid_kp).state)) t->set_kp(id(pid_kp).state);
+          if (!isnan(id(pid_ki).state)) t->set_ki(id(pid_ki).state);
+          if (!isnan(id(pid_kd).state)) t->set_kd(id(pid_kd).state);
+          if (!isnan(id(pid_threshold_low).state)) t->set_threshold_low(id(pid_threshold_low).state);
+          if (!isnan(id(pid_threshold_high).state)) t->set_threshold_high(id(pid_threshold_high).state);
+          if (!isnan(id(pid_ki_multiplier).state)) t->set_ki_multiplier(id(pid_ki_multiplier).state);
+          if (!isnan(id(fan_pwm_min_n).state))
+            id(console_fan_speed).set_min_power(id(fan_pwm_min_n).state / 100.0);
+          if (!isnan(id(fan_pwm_max_n).state))
+            id(console_fan_speed).set_max_power(id(fan_pwm_max_n).state / 100.0);
 
 # Throttle writing parameters to the internal flash memory to reduce ESP memory wear / degradation
 preferences:
@@ -49,7 +79,9 @@ number:
   # KP
   - platform: template
     name: kp
+    id: pid_kp
     icon: mdi:chart-bell-curve
+    entity_category: config
     restore_value: true
     initial_value: 0.3
     min_value: 0
@@ -63,7 +95,9 @@ number:
   # KI
   - platform: template
     name: ki
+    id: pid_ki
     icon: mdi:chart-bell-curve
+    entity_category: config
     restore_value: true
     initial_value: 0.0015
     min_value: 0
@@ -76,7 +110,9 @@ number:
   # KD
   - platform: template
     name: kd
+    id: pid_kd
     icon: mdi:chart-bell-curve
+    entity_category: config
     restore_value: true
     initial_value: 0.0
     min_value: -50
@@ -89,7 +125,12 @@ number:
   # Set threshold low
   - platform: template
     name: Deadband Threshold Low
+    id: pid_threshold_low
     icon: mdi:chart-bell-curve
+    entity_category: config
+    # Box instead of slider: an accidental swipe on a slider can silently
+    # leave the PID stuck in the deadband
+    mode: box
     restore_value: true
     initial_value: -1.0
     min_value: -20
@@ -102,7 +143,10 @@ number:
   # Set threshold high
   - platform: template
     name: Deadband Threshold High
+    id: pid_threshold_high
     icon: mdi:chart-bell-curve
+    entity_category: config
+    mode: box
     restore_value: true
     initial_value: 0.4
     min_value: 0
@@ -115,7 +159,10 @@ number:
   # Set ki multiplier
   - platform: template
     name: Deadband ki Multiplier
+    id: pid_ki_multiplier
     icon: mdi:chart-bell-curve
+    entity_category: config
+    mode: box
     restore_value: true
     initial_value: 0.04
     min_value: 0
@@ -125,17 +172,139 @@ number:
     set_action: 
       lambda: id(console_thermostat).set_ki_multiplier( x );
 
+  ## FAN CHARACTERISTICS
+  # Adjustable from Home Assistant, saved to flash. Ranges are bounded so a
+  # mistake cannot leave the enclosure without cooling, and PWM min/max
+  # ranges do not overlap so min can never exceed max.
+
+  - platform: template
+    name: Fan Min RPM
+    id: fan_rpm_min_n
+    icon: mdi:fan-chevron-down
+    entity_category: config
+    unit_of_measurement: RPM
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${fan_rpm_min}
+    min_value: 0
+    max_value: 3000
+    step: 10
+
+  - platform: template
+    name: Fan Max RPM
+    id: fan_rpm_max_n
+    icon: mdi:fan-chevron-up
+    entity_category: config
+    unit_of_measurement: RPM
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${fan_rpm_max}
+    min_value: 200
+    max_value: 5000
+    step: 10
+
+  - platform: template
+    name: Fan Min Power
+    id: fan_pwm_min_n
+    icon: mdi:sine-wave
+    entity_category: config
+    unit_of_measurement: "%"
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${fan_pwm_min}
+    min_value: 0
+    max_value: 50
+    step: 1
+    set_action:
+      lambda: |-
+        id(console_fan_speed).set_min_power(x / 100.0);
+        float lvl = id(fan_speed_pwm_voltage).state;
+        if (!isnan(lvl)) id(console_fan_speed).set_level(lvl / 100.0);
+
+  - platform: template
+    name: Fan Max Power
+    id: fan_pwm_max_n
+    icon: mdi:sine-wave
+    entity_category: config
+    unit_of_measurement: "%"
+    mode: box
+    optimistic: true
+    restore_value: true
+    initial_value: ${fan_pwm_max}
+    min_value: 50
+    max_value: 100
+    step: 1
+    set_action:
+      lambda: |-
+        id(console_fan_speed).set_max_power(x / 100.0);
+        float lvl = id(fan_speed_pwm_voltage).state;
+        if (!isnan(lvl)) id(console_fan_speed).set_level(lvl / 100.0);
+
 text_sensor:
+
+  # What the fan is actually doing, based on the measured RPM of fan 1
+  # rather than on the PWM command. Many PWM fans do not stop at 0% PWM
+  # and keep spinning at their minimum speed: with "Fan Min RPM" > 0,
+  # 0 RPM means the fan has failed, not that it is "off".
+  - platform: template
+    name: $friendly_name Fan Status
+    id: fan_status
+    icon: mdi:fan-alert
+    update_interval: 60s
+    lambda: |-
+      if (id(fan_calibrating)) {
+        switch (id(calibration_phase)) {
+          case 1: return {"Calibrating: min RPM"};
+          case 2: return {"Calibrating: min power (" + to_string(id(calibration_pwm_step)) + "%)"};
+          case 3: return {"Calibrating: max RPM"};
+          default: return {"Calibrating"};
+        }
+      }
+      if (id(pid_autotuning)) return {"Tuning PID"};
+      float rpm = id(fan_speed).state;
+      float pwm = id(fan_speed_pwm_voltage).state;
+      const float rpm_min = id(fan_rpm_min_n).state;
+      if (isnan(rpm)) return {"No reading"};
+      // < 1%: the PID output is rarely exactly 0 (it leaves residues like 0.1%)
+      bool off = isnan(pwm) || pwm < 1.0;
+      if (rpm < 100) {
+        // Stopped: only normal for fans that support 0 RPM
+        if (off && rpm_min == 0) return {"Stopped"};
+        return {"FAULT: stopped"};
+      }
+      // Well below its own minimum: bearing or motor degrading
+      if (rpm_min > 0 && rpm < rpm_min * 0.5) return {"WARNING: spinning slow"};
+      if (off) return {rpm_min > 0 ? "Minimum (does not stop)" : "Spinning without command"};
+      return {"Regulating"};
+
+  # Result of the last fan calibration
+  - platform: template
+    name: $friendly_name Fan Calibration
+    id: fan_calibration_result
+    icon: mdi:tune-vertical
+    entity_category: diagnostic
+
+  # Result of the last PID autotune (previously only visible in the logs)
+  - platform: template
+    name: $friendly_name PID Autotune Result
+    id: pid_autotune_result
+    icon: mdi:chart-bell-curve-cumulative
+    entity_category: diagnostic
 
   # Send IP Address
   - platform: wifi_info
     ip_address:
       name: $friendly_name IP Address
+      entity_category: diagnostic
 
   # Send Uptime in raw seconds
   - platform: template
     name: $friendly_name Uptime
     id: uptime_human
+    entity_category: diagnostic
     icon: mdi:clock-start
 
 sensor:
@@ -143,12 +312,14 @@ sensor:
   # Send WiFi signal strength & uptime to HA
   - platform: wifi_signal
     name: $friendly_name WiFi Strength
+    entity_category: diagnostic
     update_interval: 60s
 
   # This is a bit of overkill. It sends a human readable 
   # uptime string 1h 41m 32s instead of 6092 seconds
   - platform: uptime
     name: $friendly_name Uptime
+    entity_category: diagnostic
     id: uptime_sensor
     update_interval: 60s
     on_raw_value:
@@ -200,24 +371,28 @@ sensor:
 
   - platform: template
     name: $friendly_name p term
+    entity_category: diagnostic
     id: p_term
     unit_of_measurement: "%"
     accuracy_decimals: 2
 
   - platform: template
     name: $friendly_name i term
+    entity_category: diagnostic
     id: i_term
     unit_of_measurement: "%"
     accuracy_decimals: 2
 
   - platform: template
     name: $friendly_name d term
+    entity_category: diagnostic
     id: d_term
     unit_of_measurement: "%"
     accuracy_decimals: 2
 
   - platform: template
     name: $friendly_name output value
+    entity_category: diagnostic
     unit_of_measurement: "%"
     id: o_term
     accuracy_decimals: 2
@@ -225,12 +400,11 @@ sensor:
   - platform: template
     name: $friendly_name error value
     id: e_term
+    entity_category: diagnostic
+    # Without a unit, state_class or device_class Home Assistant treats the
+    # value as a string and ignores accuracy_decimals (8.69999980926514)
+    state_class: measurement
     accuracy_decimals: 2
-
-  - platform: template
-    name: $friendly_name is in deadband
-    id: in_deadband_term
-    accuracy_decimals: 0
 
   # GET TEMP/HUMIDITY FROM DHT11
   - platform: dht
@@ -262,6 +436,33 @@ sensor:
     unit_of_measurement: "%"
     id: fan_speed_pwm_voltage
 
+  # Actual speed of fan 1 as a % of its max RPM, from the tachometer.
+  # Unlike the PWM sensor above (the command sent to the fan), this is what
+  # the fan is really doing: a fan that does not stop at 0% PWM shows here
+  # at, say, 45%.
+  - platform: template
+    name: $friendly_name Fan Actual Speed
+    id: fan_actual_speed
+    icon: mdi:fan
+    unit_of_measurement: "%"
+    state_class: measurement
+    accuracy_decimals: 0
+    update_interval: 60s
+    lambda: |-
+      float rpm = id(fan_speed).state;
+      float rpm_max = id(fan_rpm_max_n).state;
+      if (isnan(rpm) || isnan(rpm_max) || rpm_max <= 0) return NAN;
+      return rpm / rpm_max * 100.0;
+
+# Whether the PID is inside the deadband (on/off). It used to be a numeric
+# sensor reporting 0.0/1.0, which HA treated as text (logbook noise).
+binary_sensor:
+  - platform: template
+    name: $friendly_name is in deadband
+    id: in_deadband_term
+    icon: mdi:target
+    entity_category: diagnostic
+
 output:
   # Wire this pin (13) into the PWM pin of your 12v fan
   # ledc is the name of the pwm output system on an esp32
@@ -274,8 +475,10 @@ output:
 
     # my fans stop working below 13% powerful.
     # also they're  powerful and loud, cap their max speed to 80%
-    min_power: 13%
-    max_power: 80%
+    # Initial values: at runtime the "Fan Min Power" / "Fan Max Power"
+    # numbers take over (see substitutions at the top).
+    min_power: ${fan_pwm_min}%
+    max_power: ${fan_pwm_max}%
 
     # At 0, actually turn it off, otherwise the power keeps going.
     zero_means_zero: true
@@ -290,6 +493,8 @@ output:
     type: float
     write_action:
       lambda: |-
+        // During RPM calibration the calibration script drives the fan
+        if (id(fan_calibrating)) return;
         float write_val = 
           (id(manual_fan_control).state) ?
             id(manual_fan_control).speed / 100.0 : state*1.0;
@@ -332,7 +537,7 @@ climate:
       - sensor.template.publish:
           id: o_term
           state: !lambda 'return -id(console_thermostat).get_output_value()* 100.0;'
-      - sensor.template.publish:
+      - binary_sensor.template.publish:
           id: in_deadband_term
           state: !lambda 'return id(console_thermostat).in_deadband();'
       - sensor.template.publish:
@@ -350,7 +555,14 @@ climate:
       kp: 0.3
       ki: 0.0015
       kd: 0
+      # Anti-windup. When cooling, the integral term is negative:
+      # max_integral 0 stops it accumulating towards "heating" while it is
+      # cold, and min_integral -1 stops it accumulating without bound while
+      # the target is unreachable (the output can never exceed 100% anyway).
+      # Without min_integral, the fan stays at full speed long after the
+      # temperature has dropped, while the integral unwinds.
       max_integral: 0.0
+      min_integral: -1.0
       output_averaging_samples: 1
       derivative_averaging_samples: 5
 
@@ -368,6 +580,7 @@ switch:
   - platform: restart
     name: ${friendly_name} ESP32 Restart
     id: console_fan_restart
+    entity_category: config
 
 # Restart every day at 12:30am. 
 # I've had some memory issues lockup 
@@ -380,16 +593,270 @@ time:
       minutes: 30
       hours: 0
       then:
-       - switch.turn_on: console_fan_restart
+       # Don't restart in the middle of a calibration (autotune takes hours)
+       - if:
+           condition:
+             lambda: return !id(fan_calibrating) && !id(pid_autotuning);
+           then:
+             - switch.turn_on: console_fan_restart
 
 
 # I was able to find good KP,KI,KD values manually, per the instructions,
-# but you can try pressing the autotune button from home assistant and copying the 
-# values it produces. 
+# but you can try pressing the autotune button from home assistant.
+# The resulting values are saved to the kp/ki/kd numbers automatically and
+# shown in the "PID Autotune Result" sensor, so you no longer need to dig
+# them out of the logs.
 # See more at: https://esphome.io/components/climate/pid.html#climate-pid-autotune-action
 button:
 - platform: template
   name: "PID Climate Autotune"
-  on_press: 
-    - climate.pid.autotune: console_thermostat
+  entity_category: config
+  on_press:
+    - if:
+        condition:
+          lambda: return id(fan_calibrating) || id(manual_fan_control).state;
+        then:
+          - text_sensor.template.publish:
+              id: pid_autotune_result
+              state: "FAILED: turn off manual fan speed and wait for the RPM calibration to finish"
+        else:
+          - script.execute: pid_autotune
+
+# Clears the integral term, e.g. after testing with an unreachable target
+- platform: template
+  name: "Reset PID"
+  entity_category: config
+  on_press:
+    - climate.pid.reset_integral_term: console_thermostat
+
+# Measures fan 1: RPM at 0% and 100% PWM and the min effective power (~7 min)
+- platform: template
+  name: "Calibrate Fan"
+  icon: mdi:tune-vertical
+  entity_category: config
+  on_press:
+    - if:
+        condition:
+          lambda: return id(pid_autotuning);
+        then:
+          - text_sensor.template.publish:
+              id: fan_calibration_result
+              state: "FAILED: a PID autotune is running"
+        else:
+          - script.execute: fan_calibrate
+
+globals:
+  - id: fan_calibrating
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: fan_calibration_rpm_min
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: calibration_phase
+    type: int
+    restore_value: no
+    initial_value: '0'
+  - id: calibration_pwm_step
+    type: int
+    restore_value: no
+    initial_value: '5'
+  - id: calibration_pwm_min_result
+    type: float
+    restore_value: no
+    initial_value: '-1'
+  - id: pid_autotuning
+    type: bool
+    restore_value: no
+    initial_value: 'false'
+  - id: autotune_kp0
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: autotune_ki0
+    type: float
+    restore_value: no
+    initial_value: '0'
+  - id: autotune_kd0
+    type: float
+    restore_value: no
+    initial_value: '0'
+
+script:
+  # Fan calibration: min RPM, min effective power and max RPM.
+  # For each measurement: set the PWM, wait for the fan to settle, force a
+  # tachometer reading to discard the transition, then take the real one
+  # over a clean window. Validate before saving.
+  - id: fan_calibrate
+    mode: single
+    then:
+      - globals.set:
+          id: fan_calibrating
+          value: 'true'
+
+      # Minimum: 0% PWM
+      - globals.set:
+          id: calibration_phase
+          value: '1'
+      - component.update: fan_status
+      - text_sensor.template.publish:
+          id: fan_calibration_result
+          state: "Running: measuring minimum"
+      - lambda: |-
+          id(console_fan_speed).set_level(0.0);
+          id(fan_speed_pwm_voltage).publish_state(0.0);
+      - delay: 20s
+      - component.update: fan_speed
+      - delay: 30s
+      - component.update: fan_speed
+      - globals.set:
+          id: fan_calibration_rpm_min
+          value: !lambda return id(fan_speed).state;
+
+      # Power sweep from 5% to 50% in 5% steps, with raw PWM (min/max power
+      # scaling disabled). Min power = last step where the RPM had not risen
+      # yet; for a fan with 0 RPM mode, the first step where it starts.
+      - lambda: |-
+          id(calibration_phase) = 2;
+          id(calibration_pwm_step) = 5;
+          id(calibration_pwm_min_result) = -1;
+          id(console_fan_speed).set_min_power(0.0);
+          id(console_fan_speed).set_max_power(1.0);
+      - while:
+          condition:
+            lambda: return id(calibration_pwm_min_result) < 0 && id(calibration_pwm_step) <= 50;
+          then:
+            - lambda: |-
+                char buf[48];
+                snprintf(buf, sizeof(buf), "Running: finding min power (%d%%)", id(calibration_pwm_step));
+                id(fan_calibration_result).publish_state(buf);
+                id(console_fan_speed).set_level(id(calibration_pwm_step) / 100.0);
+                id(fan_speed_pwm_voltage).publish_state(id(calibration_pwm_step));
+            - component.update: fan_status
+            - delay: 10s
+            - component.update: fan_speed
+            - delay: 20s
+            - component.update: fan_speed
+            - lambda: |-
+                float mn = id(fan_calibration_rpm_min);
+                float rpm = id(fan_speed).state;
+                if (!isnan(rpm) && !isnan(mn)) {
+                  // "Rising": above the min by 50 RPM or 8%, whichever is
+                  // larger, so reading noise does not count as a change
+                  bool rising = (mn < 100) ? (rpm >= 100)
+                                           : (rpm > mn + fmaxf(50.0f, mn * 0.08f));
+                  if (rising)
+                    id(calibration_pwm_min_result) =
+                        (mn < 100) ? id(calibration_pwm_step) : id(calibration_pwm_step) - 5;
+                }
+                id(calibration_pwm_step) += 5;
+      # Restore the configured limits before measuring the maximum
+      - lambda: |-
+          id(console_fan_speed).set_min_power(id(fan_pwm_min_n).state / 100.0);
+          id(console_fan_speed).set_max_power(id(fan_pwm_max_n).state / 100.0);
+
+      # Maximum: 100% PWM (scaled to "Fan Max Power")
+      - globals.set:
+          id: calibration_phase
+          value: '3'
+      - component.update: fan_status
+      - text_sensor.template.publish:
+          id: fan_calibration_result
+          state: "Running: measuring maximum"
+      - lambda: |-
+          id(console_fan_speed).set_level(1.0);
+          id(fan_speed_pwm_voltage).publish_state(100.0);
+      - delay: 20s
+      - component.update: fan_speed
+      - delay: 30s
+      - component.update: fan_speed
+
+      # Validate, save and hand control back
+      - lambda: |-
+          float mn = id(fan_calibration_rpm_min);
+          float mx = id(fan_speed).state;
+          std::string res;
+          if (isnan(mn) || isnan(mx)) {
+            res = "FAILED: no tachometer reading";
+          } else if (mx < 200) {
+            res = "FAILED: fan not spinning at maximum";
+          } else if (mx < mn * 1.2) {
+            res = "FAILED: fan does not respond to PWM";
+          } else {
+            if (mn < 100) mn = 0;  // fan with 0 RPM mode
+            mn = roundf(mn / 10.0) * 10.0;
+            mx = roundf(mx / 10.0) * 10.0;
+            auto c1 = id(fan_rpm_min_n).make_call();
+            c1.set_value(mn);
+            c1.perform();
+            auto c2 = id(fan_rpm_max_n).make_call();
+            c2.set_value(mx);
+            c2.perform();
+            res = "OK: " + to_string((int) mn) + " - " + to_string((int) mx) + " RPM";
+            float pm = id(calibration_pwm_min_result);
+            if (pm >= 0) {
+              auto c3 = id(fan_pwm_min_n).make_call();
+              c3.set_value(pm);
+              c3.perform();
+              res += ", min power " + to_string((int) pm) + "%";
+            } else {
+              res += ", min power unchanged (no rise up to 50%)";
+            }
+          }
+          id(fan_calibration_result).publish_state(res);
+          id(fan_calibrating) = false;
+          id(calibration_phase) = 0;
+          // Hand control back to the PID (or to manual, if it is on)
+          float out = -id(console_thermostat).get_output_value();
+          if (isnan(out)) out = 0;
+          id(proxy_output).set_level(clamp(out, 0.0f, 1.0f));
+      - component.update: fan_status
+
+  # PID autotune with the result visible in Home Assistant.
+  # ESPHome's autotuner does not expose whether it has finished, but on
+  # success it overwrites the controller's kp/ki/kd. Detect that change and
+  # copy the values to the numbers (saved to flash, they survive reboots).
+  # The autotuner has no failure path: if it has not finished in 8h it is
+  # considered failed and the previous values are kept.
+  - id: pid_autotune
+    mode: single
+    then:
+      - lambda: |-
+          auto t = id(console_thermostat);
+          id(autotune_kp0) = t->get_kp();
+          id(autotune_ki0) = t->get_ki();
+          id(autotune_kd0) = t->get_kd();
+          id(pid_autotuning) = true;
+      - text_sensor.template.publish:
+          id: pid_autotune_result
+          state: "Running (may take hours)"
+      - component.update: fan_status
+      - climate.pid.autotune: console_thermostat
+      - wait_until:
+          condition:
+            lambda: |-
+              auto t = id(console_thermostat);
+              return t->get_kp() != id(autotune_kp0) || t->get_ki() != id(autotune_ki0) ||
+                     t->get_kd() != id(autotune_kd0);
+          timeout: 8h
+      - lambda: |-
+          auto t = id(console_thermostat);
+          bool changed = t->get_kp() != id(autotune_kp0) || t->get_ki() != id(autotune_ki0) ||
+                         t->get_kd() != id(autotune_kd0);
+          char buf[120];
+          if (changed) {
+            auto c1 = id(pid_kp).make_call(); c1.set_value(t->get_kp()); c1.perform();
+            auto c2 = id(pid_ki).make_call(); c2.set_value(t->get_ki()); c2.perform();
+            auto c3 = id(pid_kd).make_call(); c3.set_value(t->get_kd()); c3.perform();
+            snprintf(buf, sizeof(buf), "OK: kp %.4g->%.4g, ki %.4g->%.4g, kd %.4g->%.4g",
+                     id(autotune_kp0), t->get_kp(), id(autotune_ki0), t->get_ki(),
+                     id(autotune_kd0), t->get_kd());
+          } else {
+            snprintf(buf, sizeof(buf), "FAILED: not finished after 8h (kept kp %.4g, ki %.4g, kd %.4g)",
+                     id(autotune_kp0), id(autotune_ki0), id(autotune_kd0));
+          }
+          id(pid_autotune_result).publish_state(buf);
+          id(pid_autotuning) = false;
+      - component.update: fan_status
     

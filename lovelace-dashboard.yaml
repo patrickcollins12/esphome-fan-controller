@@ -27,7 +27,7 @@
               cards:
                 - type: glance
                   entities:
-                    - entity: sensor.console_fan_is_in_deadband
+                    - entity: binary_sensor.console_fan_is_in_deadband
                       name: in_deadband?
                     - entity: sensor.console_fan_error_value
                       name: error
